@@ -1,0 +1,41 @@
+import logging
+
+from fastapi import FastAPI
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+
+async def start(app: FastAPI, **kwargs):
+    logging.info("start")
+
+
+async def stop(app: FastAPI, **kwargs):
+    logging.info("stop")
+
+
+async def before_chat(messages: list, user_content: str, **kwargs):
+    logging.info(user_content)
+
+
+async def after_chat(messages: list, user_content: str, assistant_content: str, **kwargs):
+    logging.info(assistant_content)
+
+
+async def before_model(messages: list, **kwargs):
+    pass
+
+
+async def after_model(messages: list, **kwargs):
+    logging.info(messages[-1])
+
+
+async def before_tool(messages: list, tool_call: dict, **kwargs):
+    pass
+
+
+async def after_tool(messages: list, tool_call: dict, tool_response: str, **kwargs):
+    logging.info(messages[-1])
