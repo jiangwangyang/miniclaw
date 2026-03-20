@@ -1,7 +1,11 @@
+import json
 import logging
+import os
 
 from fastapi import FastAPI, APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+
+SESSIONS_DIR = "sessions"
 
 # HTML 内容字符串
 HTML_CONTENT = """
@@ -22,7 +26,89 @@ HTML_CONTENT = """
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             height: 100vh;
             display: flex;
+            overflow: hidden;
+        }
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 260px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            display: flex;
             flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .new-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .sidebar-title {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 10px 10px;
+        }
+        .session-item {
+            padding: 12px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .session-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .session-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .session-item-icon {
+            font-size: 16px;
+        }
+        .session-item-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
         }
         .header {
             background: rgba(255, 255, 255, 0.1);
@@ -32,6 +118,14 @@ HTML_CONTENT = """
             font-size: 18px;
             font-weight: 600;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-session-info {
+            font-size: 12px;
+            opacity: 0.7;
+            font-weight: 400;
         }
         .chat-container {
             flex: 1;
@@ -120,6 +214,7 @@ HTML_CONTENT = """
             padding: 12px 16px;
             border-radius: 18px;
             border-bottom-left-radius: 4px;
+            margin: 0 20px;
         }
         .typing-indicator span {
             display: inline-block;
@@ -136,25 +231,70 @@ HTML_CONTENT = """
             0%, 60%, 100% { transform: translateY(0); }
             30% { transform: translateY(-10px); }
         }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            padding: 40px;
+        }
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .empty-state-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: white;
+        }
+        .empty-state-text {
+            font-size: 14px;
+            max-width: 300px;
+        }
     </style>
 </head>
 <body>
-    <div class="header">🤖 MiniClaw Chat</div>
-    
-    <div class="chat-container" id="chatContainer">
-        <div class="message assistant-message">
-            你好！我是 MiniClaw，有什么可以帮助你的吗？
-            <div class="message-time">刚刚</div>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" onclick="startNewChat()">
+                <span>+</span>
+                <span>新对话</span>
+            </button>
+            <div class="sidebar-title">历史记录</div>
+        </div>
+        <div class="session-list" id="sessionList">
+            <!-- 会话列表将在这里动态生成 -->
         </div>
     </div>
-    
-    <div class="typing-indicator" id="typingIndicator">
-        <span></span><span></span><span></span>
-    </div>
-    
-    <div class="input-container">
-        <input type="text" class="message-input" id="messageInput" placeholder="输入消息..." maxlength="2000">
-        <button class="send-button" id="sendButton" onclick="sendMessage()">发送</button>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <div class="header">
+            <span>🤖 MiniClaw Chat</span>
+            <span class="header-session-info" id="sessionInfo"></span>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">💬</div>
+                <div class="empty-state-title">开始新对话</div>
+                <div class="empty-state-text">点击左侧"新对话"按钮，或选择一个历史会话开始聊天</div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <span></span><span></span><span></span>
+        </div>
+
+        <div class="input-container">
+            <input type="text" class="message-input" id="messageInput" placeholder="输入消息..." maxlength="2000" disabled>
+            <button class="send-button" id="sendButton" onclick="sendMessage()" disabled>发送</button>
+        </div>
     </div>
 
     <script>
@@ -162,19 +302,118 @@ HTML_CONTENT = """
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const typingIndicator = document.getElementById('typingIndicator');
-        const sessionId = crypto.randomUUID();
+        const sessionList = document.getElementById('sessionList');
+        const sessionInfo = document.getElementById('sessionInfo');
+        const emptyState = document.getElementById('emptyState');
+
+        let currentSessionId = null;
         let isTyping = false;
 
-        // 回车发送
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSessionList();
+
+            // 回车发送
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
         });
 
-        // 自动聚焦输入框
-        messageInput.focus();
+        // 加载会话列表
+        async function loadSessionList() {
+            try {
+                const response = await fetch('/api/sessions');
+                const sessions = await response.json();
+
+                sessionList.innerHTML = '';
+                sessions.forEach(session => {
+                    const item = document.createElement('div');
+                    item.className = 'session-item';
+                    item.dataset.id = session.id;
+                    item.innerHTML = `
+                        <span class="session-item-icon">💬</span>
+                        <span class="session-item-text">${escapeHtml(session.title)}</span>
+                    `;
+                    item.onclick = () => loadSession(session.id);
+                    sessionList.appendChild(item);
+                });
+            } catch (error) {
+                console.error('加载会话列表失败:', error);
+            }
+        }
+
+        // 开始新对话
+        function startNewChat() {
+            currentSessionId = crypto.randomUUID();
+            localStorage.setItem('miniclaw_current_session', currentSessionId);
+
+            // 清空聊天区域
+            chatContainer.innerHTML = '';
+            chatContainer.appendChild(emptyState);
+            emptyState.style.display = 'flex';
+
+            // 启用输入
+            enableInput();
+            sessionInfo.textContent = '新对话';
+
+            // 刷新列表并高亮当前会话
+            loadSessionList().then(() => {
+                const items = sessionList.querySelectorAll('.session-item');
+                items.forEach(item => item.classList.remove('active'));
+            });
+        }
+
+        // 加载指定会话
+        async function loadSession(sessionId) {
+            currentSessionId = sessionId;
+            localStorage.setItem('miniclaw_current_session', sessionId);
+
+            try {
+                const response = await fetch(`/api/sessions/${sessionId}`);
+                const data = await response.json();
+
+                // 清空聊天区域
+                chatContainer.innerHTML = '';
+                emptyState.style.display = 'none';
+
+                // 渲染历史消息
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        if (msg.role === 'user') {
+                            addMessage(msg.content, true);
+                        } else if (msg.role === 'assistant') {
+                            addMessage(msg.content, false);
+                        }
+                    });
+                } else {
+                    chatContainer.appendChild(emptyState);
+                    emptyState.style.display = 'flex';
+                }
+
+                // 启用输入
+                enableInput();
+                sessionInfo.textContent = `会话: ${sessionId.slice(0, 8)}...`;
+
+                // 更新高亮
+                const items = sessionList.querySelectorAll('.session-item');
+                items.forEach(item => {
+                    item.classList.toggle('active', item.dataset.id === sessionId);
+                });
+            } catch (error) {
+                console.error('加载会话失败:', error);
+                addMessage('加载会话失败: ' + error.message, false);
+            }
+        }
+
+        // 启用输入
+        function enableInput() {
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+        }
 
         function getCurrentTime() {
             const now = new Date();
@@ -182,6 +421,9 @@ HTML_CONTENT = """
         }
 
         function addMessage(content, isUser) {
+            // 隐藏空状态
+            emptyState.style.display = 'none';
+
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
             messageDiv.innerHTML = `
@@ -206,15 +448,12 @@ HTML_CONTENT = """
             isTyping = typing;
             typingIndicator.style.display = typing ? 'block' : 'none';
             sendButton.disabled = typing;
-            if (typing) {
-                chatContainer.parentNode.insertBefore(typingIndicator, chatContainer.nextSibling);
-                scrollToBottom();
-            }
+            messageInput.disabled = typing;
         }
 
         async function sendMessage() {
             const message = messageInput.value.trim();
-            if (!message || isTyping) return;
+            if (!message || isTyping || !currentSessionId) return;
 
             // 添加用户消息
             addMessage(message, true);
@@ -224,7 +463,7 @@ HTML_CONTENT = """
             setTyping(true);
 
             try {
-                const eventSource = new EventSource(`/chat?message=${encodeURIComponent(message)}&id=${sessionId}`);
+                const eventSource = new EventSource(`/chat?message=${encodeURIComponent(message)}&id=${currentSessionId}`);
                 let assistantMessage = '';
                 let messageDiv = null;
 
@@ -234,6 +473,9 @@ HTML_CONTENT = """
                     // 检查结束标记
                     if (line === '[DONE]') {
                         eventSource.close();
+                        setTyping(false);
+                        // 刷新会话列表
+                        loadSessionList();
                         return;
                     }
 
@@ -263,15 +505,9 @@ HTML_CONTENT = """
 
                 eventSource.onerror = (error) => {
                     eventSource.close();
+                    setTyping(false);
                     if (!assistantMessage) {
-                        setTyping(false);
                         addMessage('抱歉，我没有收到响应。', false);
-                    }
-                };
-
-                eventSource.onclose = () => {
-                    if (!assistantMessage) {
-                        setTyping(false);
                     }
                 };
             } catch (error) {
@@ -293,6 +529,53 @@ router = APIRouter(prefix="")
 @router.get("/index.html", response_class=HTMLResponse)
 async def index():
     return HTML_CONTENT
+
+
+# 获取所有会话列表
+@router.get("/api/sessions")
+async def get_sessions():
+    sessions = []
+    if os.path.exists(SESSIONS_DIR):
+        for filename in os.listdir(SESSIONS_DIR):
+            if filename.endswith('.json'):
+                session_id = filename[:-5]  # 去掉 .json
+                file_path = os.path.join(SESSIONS_DIR, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        # 获取第一条用户消息作为标题，或使用默认标题
+                        title = "对话"
+                        for msg in data:
+                            if msg.get('role') == 'user':
+                                title = msg.get('content', '')[:20] + '...' if len(msg.get('content', '')) > 20 else msg.get('content', '')
+                                break
+                        sessions.append({
+                            "id": session_id,
+                            "title": title,
+                            "updated_at": os.path.getmtime(file_path)
+                        })
+                except Exception as e:
+                    logging.error(f"读取会话文件失败 {filename}: {e}")
+
+    # 按更新时间排序
+    sessions.sort(key=lambda x: x['updated_at'], reverse=True)
+    return JSONResponse(content=sessions)
+
+
+# 获取指定会话的消息
+@router.get("/api/sessions/{session_id}")
+async def get_session(session_id: str):
+    file_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+    if not os.path.exists(file_path):
+        return JSONResponse(content={"messages": []})
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            messages = json.load(f)
+        filtered_messages = [msg for msg in messages if msg.get('role') != 'system']
+        return JSONResponse(content={"messages": filtered_messages})
+    except Exception as e:
+        logging.error(f"读取会话失败 {session_id}: {e}")
+        return JSONResponse(content={"messages": [], "error": str(e)})
 
 
 async def start(app: FastAPI, **kwargs):
