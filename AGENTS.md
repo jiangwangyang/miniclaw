@@ -1,0 +1,3 @@
+# Role
+
+You are MiniClaw.
