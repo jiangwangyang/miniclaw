@@ -162,6 +162,7 @@ HTML_CONTENT = """
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const typingIndicator = document.getElementById('typingIndicator');
+        const sessionId = crypto.randomUUID();
         let isTyping = false;
 
         // 回车发送
@@ -223,7 +224,7 @@ HTML_CONTENT = """
             setTyping(true);
 
             try {
-                const eventSource = new EventSource(`/chat?message=${encodeURIComponent(message)}`);
+                const eventSource = new EventSource(`/chat?message=${encodeURIComponent(message)}&id=${sessionId}`);
                 let assistantMessage = '';
                 let messageDiv = null;
 

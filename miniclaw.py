@@ -76,17 +76,23 @@ tools = [{
 
 
 # 对话
-async def chat_generator(user_content: str) -> AsyncGenerator[str, None]:
-    # 系统提示词
-    system_content = ""
-    if os.path.exists("AGENTS.md"):
-        with open("AGENTS.md", "r", encoding="utf-8") as f:
-            system_content = f.read()
-    # 对话上下文
-    messages: list[dict[str, object]] = [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": user_content}
-    ]
+async def chat_generator(id: str, user_content: str) -> AsyncGenerator[str, None]:
+    # 确保 sessions 目录存在
+    if not os.path.exists("sessions"):
+        os.makedirs("sessions")
+    session_file = os.path.join("sessions", f"{id}.json")
+    # 加载 messages
+    if os.path.exists(session_file):
+        with open(session_file, "r", encoding="utf-8") as f:
+            messages = json.load(f)
+    else:
+        system_content = ""
+        if os.path.exists("AGENTS.md"):
+            with open("AGENTS.md", "r", encoding="utf-8") as f:
+                system_content = f.read()
+        messages = [{"role": "system", "content": system_content}]
+    # 添加用户消息
+    messages.append({"role": "user", "content": user_content})
     await execute_plugins(action="before_chat", messages=messages, user_content=user_content)
 
     while True:
@@ -138,8 +144,10 @@ async def chat_generator(user_content: str) -> AsyncGenerator[str, None]:
         # 4. 判断结束
         if not assistant_tool_calls:
             break
-    # SSE 结束标记
     yield "data: [DONE]\n\n"
+    # 保存消息
+    with open(session_file, "w", encoding="utf-8") as f:
+        json.dump(messages, f, ensure_ascii=False, indent=4)
     await execute_plugins(action="after_chat", messages=messages, user_content=user_content, assistant_content=assistant_content)
 
 
@@ -148,8 +156,8 @@ app: FastAPI = FastAPI(lifespan=lifespan)
 
 # 对话接口
 @app.api_route("/chat", methods=["GET", "POST"])
-async def chat(message: str):
-    return StreamingResponse(chat_generator(message), media_type="text/event-stream")
+async def chat(id: str, message: str):
+    return StreamingResponse(chat_generator(id, message), media_type="text/event-stream")
 
 
 if __name__ == "__main__":
