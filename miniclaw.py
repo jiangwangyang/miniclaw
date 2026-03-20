@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -23,17 +24,27 @@ client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
 
 # 加载 plugins 目录下的所有模块并执行对应函数
 async def execute_plugins(action: str, **kwargs):
-    for filename in os.listdir("plugins"):
-        if filename.endswith(".py") and filename != "__init__.py":
-            module_name = f"plugins.{filename[:-3]}"
-            module = importlib.import_module(module_name)
-            # 执行对应函数
-            func = getattr(module, action, None)
-            if func:
-                try:
-                    await func(**kwargs)
-                except Exception as e:
-                    logging.error(e)
+    # 将 plugins 目录加入 sys.path
+    plugins_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugins")
+    if plugins_dir not in sys.path:
+        sys.path.insert(0, plugins_dir)
+
+    for entry in os.listdir(plugins_dir):
+        plugin_path = os.path.join(plugins_dir, entry)
+        # 检查是否是目录且包含 plugin.py
+        if os.path.isdir(plugin_path) and os.path.isfile(os.path.join(plugin_path, "plugin.py")):
+            module_name = f"{entry}.plugin"
+            try:
+                module = importlib.import_module(module_name)
+                # 执行对应函数
+                func = getattr(module, action, None)
+                if func:
+                    try:
+                        await func(**kwargs)
+                    except Exception as e:
+                        logging.error(e)
+            except Exception as e:
+                logging.error(f"加载插件 {entry} 失败: {e}")
 
 
 # 生命周期管理
