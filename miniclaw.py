@@ -10,6 +10,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI
+from starlette.responses import JSONResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,6 +22,7 @@ BASE_URL = "https://api.minimaxi.com/v1"
 API_KEY = os.getenv("MINIMAX_API_KEY")
 MODEL = "MiniMax-M2.7"
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
+session_flag: dict[str, bool] = {}
 
 
 # 执行本地命令
@@ -100,13 +102,22 @@ app: FastAPI = FastAPI(lifespan=lifespan)
 # 对话接口
 @app.api_route("/chat", methods=["GET", "POST"])
 async def chat(id: str, message: str):
+    if id in session_flag:
+        return JSONResponse(status_code=403, content={"success": False, "message": f"会话 {id} 正在处理中"})
+
     async def chat_generator() -> AsyncGenerator[str, None]:
+        # session start
+        session_flag[id] = True
         user_content = message
+        assistant_content = ""
         messages = [{"role": "user", "content": user_content}]
         # before_chat
         await execute_plugins(action="before_chat", id=id, messages=messages, user_content=user_content)
 
         while True:
+            if not session_flag.get(id, False):
+                break
+
             # 1. 模型生成
             response = await client.chat.completions.create(model=MODEL, messages=messages, tools=tools, stream=True)
 
@@ -116,6 +127,8 @@ async def chat(id: str, message: str):
             assistant_content = ""
             assistant_tool_calls = []
             async for chunk in response:
+                if not session_flag.get(id, False):
+                    break
                 chunk = json.loads(json.dumps(chunk, default=lambda o: o.__dict__))
                 delta = chunk["choices"][0]["delta"]
                 # SSE 流式响应
@@ -135,6 +148,8 @@ async def chat(id: str, message: str):
 
             # 3. 处理工具调用
             for tool_call in assistant_tool_calls:
+                if not session_flag.get(id, False):
+                    break
                 # before tool
                 await execute_plugins(action="before_tool", id=id, messages=messages, tool_call=tool_call)
                 try:
@@ -151,11 +166,24 @@ async def chat(id: str, message: str):
             # 4. 判断结束
             if not assistant_tool_calls:
                 break
-        yield "data: [DONE]\n\n"
+
         # after chat
         await execute_plugins(action="after_chat", id=id, messages=messages, user_content=user_content, assistant_content=assistant_content)
+        # session end
+        if id in session_flag:
+            del session_flag[id]
+        yield "data: [DONE]\n\n"
 
     return StreamingResponse(chat_generator(), media_type="text/event-stream")
+
+
+# 中断接口
+@app.post("/interrupt")
+async def interrupt(id: str):
+    if id in session_flag:
+        session_flag[id] = False
+        return {"success": True, "message": f"会话 {id} 已标记为中断"}
+    return {"success": False, "message": f"会话 {id} 不存在或已结束"}
 
 
 if __name__ == "__main__":
