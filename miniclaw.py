@@ -7,7 +7,7 @@ from asyncio import subprocess
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI
 from starlette.responses import JSONResponse
@@ -101,21 +101,20 @@ app: FastAPI = FastAPI(lifespan=lifespan)
 
 # 对话接口
 @app.api_route("/chat", methods=["GET", "POST"])
-async def chat(id: str, message: str):
-    if id in session_flag:
-        return JSONResponse(status_code=403, content={"success": False, "message": f"会话 {id} 正在处理中"})
+async def chat(session_id: str = Query(..., alias="id"), user_content: str = Query(..., alias="message")):
+    if session_id in session_flag:
+        return JSONResponse(status_code=403, content={"success": False, "message": f"会话 {session_id} 正在处理中"})
 
     async def chat_generator() -> AsyncGenerator[str, None]:
         # session start
-        session_flag[id] = True
-        user_content = message
+        session_flag[session_id] = True
         assistant_content = ""
         messages = [{"role": "user", "content": user_content}]
         # before_chat
-        await execute_plugins(action="before_chat", id=id, messages=messages, user_content=user_content)
+        await execute_plugins(action="before_chat", session_id=session_id, messages=messages, user_content=user_content)
 
         while True:
-            if not session_flag.get(id, False):
+            if not session_flag.get(session_id, False):
                 break
 
             # 1. 模型生成
@@ -123,11 +122,11 @@ async def chat(id: str, message: str):
 
             # 2. 收集内容
             # before model
-            await execute_plugins(action="before_model", id=id, messages=messages)
+            await execute_plugins(action="before_model", session_id=session_id, messages=messages)
             assistant_content = ""
             assistant_tool_calls = []
             async for chunk in response:
-                if not session_flag.get(id, False):
+                if not session_flag.get(session_id, False):
                     break
                 chunk = json.loads(json.dumps(chunk, default=lambda o: o.__dict__))
                 delta = chunk["choices"][0]["delta"]
@@ -144,14 +143,14 @@ async def chat(id: str, message: str):
                     assistant_content += delta["content"]
             messages.append({"role": "assistant", "content": assistant_content, "tool_calls": assistant_tool_calls})
             # after model
-            await execute_plugins(action="after_model", id=id, messages=messages)
+            await execute_plugins(action="after_model", session_id=session_id, messages=messages)
 
             # 3. 处理工具调用
             for tool_call in assistant_tool_calls:
-                if not session_flag.get(id, False):
+                if not session_flag.get(session_id, False):
                     break
                 # before tool
-                await execute_plugins(action="before_tool", id=id, messages=messages, tool_call=tool_call)
+                await execute_plugins(action="before_tool", session_id=session_id, messages=messages, tool_call=tool_call)
                 try:
                     args = json.loads(tool_call["function"]["arguments"])
                     tool_content = await execute_command(args.get("command", ""))
@@ -161,17 +160,17 @@ async def chat(id: str, message: str):
                 yield f"data: {json.dumps(tool_message, ensure_ascii=False)}\n\n"
                 messages.append(tool_message)
                 # after tool
-                await execute_plugins(action="after_tool", id=id, messages=messages, tool_call=tool_call, tool_content=tool_content)
+                await execute_plugins(action="after_tool", session_id=session_id, messages=messages, tool_call=tool_call, tool_content=tool_content)
 
             # 4. 判断结束
             if not assistant_tool_calls:
                 break
 
         # after chat
-        await execute_plugins(action="after_chat", id=id, messages=messages, user_content=user_content, assistant_content=assistant_content)
+        await execute_plugins(action="after_chat", session_id=session_id, messages=messages, user_content=user_content, assistant_content=assistant_content)
         # session end
-        if id in session_flag:
-            del session_flag[id]
+        if session_id in session_flag:
+            del session_flag[session_id]
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(chat_generator(), media_type="text/event-stream")
@@ -179,11 +178,11 @@ async def chat(id: str, message: str):
 
 # 中断接口
 @app.api_route("/interrupt", methods=["GET", "POST"])
-async def interrupt(id: str):
-    if id in session_flag:
-        session_flag[id] = False
-        return {"success": True, "message": f"会话 {id} 已标记为中断"}
-    return {"success": False, "message": f"会话 {id} 不存在或已结束"}
+async def interrupt(session_id: str = Query(..., alias="id")):
+    if session_id in session_flag:
+        session_flag[session_id] = False
+        return {"success": True, "message": f"会话 {session_id} 已标记为中断"}
+    return {"success": False, "message": f"会话 {session_id} 不存在或已结束"}
 
 
 if __name__ == "__main__":

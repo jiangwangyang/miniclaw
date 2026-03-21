@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Path
 from fastapi.responses import JSONResponse
 
 # 会话存储目录
@@ -13,8 +13,8 @@ router = APIRouter(prefix="")
 
 
 # 加载会话消息
-def load_session_messages(id: str) -> list:
-    filepath = os.path.join(SESSION_DIR, f"{id}.json")
+def load_session_messages(session_id: str) -> list:
+    filepath = os.path.join(SESSION_DIR, f"{session_id}.json")
     if os.path.exists(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             try:
@@ -31,8 +31,8 @@ async def get_sessions():
     for filename in os.listdir(SESSION_DIR):
         filepath = os.path.join(SESSION_DIR, filename)
         if filename.endswith('.json'):
-            id = filename[:-5]
-            messages = load_session_messages(id)
+            session_id = filename[:-5]
+            messages = load_session_messages(session_id)
             title = "对话"
             for msg in messages:
                 if msg.get('role') == 'user':
@@ -40,7 +40,7 @@ async def get_sessions():
                     title = content[:20] + '...' if len(content) > 20 else content
                     break
             sessions.append({
-                "id": id,
+                "id": session_id,
                 "title": title,
                 "updated_at": os.path.getmtime(filepath)
             })
@@ -50,8 +50,8 @@ async def get_sessions():
 
 
 @router.get("/session/{id}")
-async def get_session(id: str):
-    messages = load_session_messages(id)
+async def get_session(session_id: str = Path(..., alias="id")):
+    messages = load_session_messages(session_id)
     filtered_messages = [msg for msg in messages if msg.get('role') != 'system']
     return JSONResponse(content={"messages": filtered_messages})
 
@@ -71,8 +71,8 @@ async def after_application(app: FastAPI, **kwargs):
     logging.info("Session plugin stopped")
 
 
-async def before_chat(id: str, messages: list, user_content: str, **kwargs):
-    loaded_messages = load_session_messages(id)
+async def before_chat(session_id: str, messages: list, user_content: str, **kwargs):
+    loaded_messages = load_session_messages(session_id)
     if loaded_messages:
         messages.clear()
         messages.extend(loaded_messages)
@@ -89,23 +89,23 @@ async def before_chat(id: str, messages: list, user_content: str, **kwargs):
     return
 
 
-async def after_chat(id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
-    session_file = os.path.join(SESSION_DIR, f"{id}.json")
+async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
+    session_file = os.path.join(SESSION_DIR, f"{session_id}.json")
     with open(session_file, "w", encoding="utf-8") as f:
         json.dump(messages, f, ensure_ascii=False)
 
 
-async def before_model(id: str, messages: list, **kwargs):
+async def before_model(session_id: str, messages: list, **kwargs):
     pass
 
 
-async def after_model(id: str, messages: list, **kwargs):
+async def after_model(session_id: str, messages: list, **kwargs):
     pass
 
 
-async def before_tool(id: str, messages: list, tool_call: dict, **kwargs):
+async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs):
     pass
 
 
-async def after_tool(id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
+async def after_tool(session_id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
     pass

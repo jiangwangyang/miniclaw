@@ -32,25 +32,25 @@ async def after_application(app: FastAPI, **kwargs):
     logging.info("Web plugin stopped")
 
 
-async def before_chat(id: str, messages: list, user_content: str, **kwargs):
+async def before_chat(session_id: str, messages: list, user_content: str, **kwargs):
     pass
 
 
-async def after_chat(id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
+async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
     pass
 
 
-async def before_model(id: str, messages: list, **kwargs):
+async def before_model(session_id: str, messages: list, **kwargs):
     pass
 
 
-async def after_model(id: str, messages: list, **kwargs):
+async def after_model(session_id: str, messages: list, **kwargs):
     pass
 
 
-async def before_tool(id: str, messages: list, tool_call: dict, **kwargs):
+async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs):
     pass
 
 
-async def after_tool(id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
+async def after_tool(session_id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
     pass
