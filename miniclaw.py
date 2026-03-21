@@ -5,7 +5,6 @@ import os
 import sys
 from asyncio import subprocess
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Query
 from fastapi.responses import StreamingResponse
@@ -17,22 +16,15 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-PLUGIN_DIR = "plugins"
 BASE_URL = "https://api.minimaxi.com/v1"
 API_KEY = os.getenv("MINIMAX_API_KEY")
 MODEL = "MiniMax-M2.7"
+SKILLS_DIR = os.path.expanduser("~/.agents/skills/")
+PLUGINS_DIR = "plugins/"
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
+skills: list[dict[str, str]] = []
+plugins: list[object] = []
 session_flag: dict[str, bool] = {}
-
-
-# 执行本地命令
-async def execute_command(command: str) -> str:
-    process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    return f"{stdout.decode()}{stderr.decode()}"
-
-
-# 工具定义
 tools = [{
     "type": "function",
     "function": {
@@ -49,18 +41,45 @@ tools = [{
 }]
 
 
+# 执行本地命令
+async def execute_command(command: str) -> str:
+    process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    return f"{stdout.decode()}{stderr.decode()}"
+
+
+# 加载技能
+def load_skills():
+    skills.clear()
+    if not os.path.exists(SKILLS_DIR):
+        return
+    # 遍历技能目录
+    for entry in os.listdir(SKILLS_DIR):
+        skill_path = os.path.join(SKILLS_DIR, entry)
+        skill_file_path = os.path.join(skill_path, "SKILL.md")
+        if not os.path.isdir(skill_path) or not os.path.isfile(skill_file_path):
+            continue
+        # 尝试读取 SKILL.md 提取 name 和 description
+        with open(skill_file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        if len(lines) >= 4 and lines[0].strip() == "---" and lines[1].strip().startswith("name:") and lines[2].strip().startswith("description:"):
+            name = lines[1].strip()[5:].strip()
+            description = lines[2].strip()[12:].strip()
+            if name == entry:
+                skills.append({"name": name, "description": description, "path": skill_file_path})
+
+
 # 加载插件
-def load_plugins() -> list:
-    plugins = []
+def load_plugins():
+    plugins.clear()
     # 加入插件目录
-    if not os.path.exists(PLUGIN_DIR):
-        os.makedirs(PLUGIN_DIR)
-    plugin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), PLUGIN_DIR)
-    if plugin_dir not in sys.path:
-        sys.path.insert(0, plugin_dir)
+    if not os.path.exists(PLUGINS_DIR):
+        return
+    if PLUGINS_DIR not in sys.path:
+        sys.path.insert(0, PLUGINS_DIR)
     # 加载插件
-    for entry in os.listdir(plugin_dir):
-        plugin_path = os.path.join(plugin_dir, entry)
+    for entry in os.listdir(PLUGINS_DIR):
+        plugin_path = os.path.join(PLUGINS_DIR, entry)
         if os.path.isdir(plugin_path) and os.path.isfile(os.path.join(plugin_path, "plugin.py")):
             module_name = f"{entry}.plugin"
             try:
@@ -68,10 +87,6 @@ def load_plugins() -> list:
                 plugins.append(module)
             except Exception as e:
                 logging.error(f"加载插件 {entry} 失败: {e}")
-    return plugins
-
-
-plugins = load_plugins()
 
 
 # 执行插件钩子函数
@@ -96,6 +111,8 @@ async def lifespan(app: FastAPI):
     await execute_plugins(action="after_application", app=app)
 
 
+load_skills()
+load_plugins()
 app: FastAPI = FastAPI(lifespan=lifespan)
 
 
@@ -105,11 +122,18 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
     if session_id in session_flag:
         return JSONResponse(status_code=403, content={"success": False, "message": f"会话 {session_id} 正在处理中"})
 
-    async def chat_generator() -> AsyncGenerator[str, None]:
+    async def chat_generator():
         # session start
         session_flag[session_id] = True
         assistant_content = ""
-        messages = [{"role": "user", "content": user_content}]
+        system_content = f"# Available Skills\n{skills}"
+        if os.path.exists("AGENTS.md"):
+            with open("AGENTS.md", "r", encoding="utf-8") as f:
+                system_content += f.read()
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": user_content}
+        ]
         # before_chat
         await execute_plugins(action="before_chat", session_id=session_id, messages=messages, user_content=user_content)
 

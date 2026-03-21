@@ -79,15 +79,6 @@ async def before_chat(session_id: str, messages: list, user_content: str, **kwar
         messages.append({"role": "user", "content": user_content})
         return
 
-    system_content = ""
-    if os.path.exists("AGENTS.md"):
-        with open("AGENTS.md", "r", encoding="utf-8") as f:
-            system_content = f.read()
-    messages.clear()
-    messages.append({"role": "system", "content": system_content})
-    messages.append({"role": "user", "content": user_content})
-    return
-
 
 async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
     session_file = os.path.join(SESSION_DIR, f"{session_id}.json")
