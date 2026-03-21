@@ -196,6 +196,24 @@
             cursor: not-allowed;
             transform: none;
         }
+        .interrupt-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .interrupt-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4);
+        }
+        .interrupt-button:active {
+            transform: translateY(0);
+        }
         .typing-indicator {
             display: none;
             align-self: flex-start;
@@ -283,6 +301,8 @@
     <div class="input-container">
         <label for="messageInput"></label>
         <input type="text" class="message-input" id="messageInput" placeholder="输入消息..." maxlength="2000" disabled>
+        <button class="interrupt-button" id="interruptButton" onclick="interruptSession()" style="display: none;">打断
+        </button>
         <button class="send-button" id="sendButton" onclick="sendMessage()" disabled>发送</button>
     </div>
 </div>
@@ -291,6 +311,7 @@
     const chatContainer = document.getElementById('chatContainer');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
+    const interruptButton = document.getElementById('interruptButton');
     const typingIndicator = document.getElementById('typingIndicator');
     const sessionList = document.getElementById('sessionList');
     const sessionInfo = document.getElementById('sessionInfo');
@@ -298,6 +319,7 @@
 
     let currentSessionId = null;
     let isTyping = false;
+    let currentEventSource = null;
 
     // 页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
@@ -446,6 +468,17 @@
         typingIndicator.style.display = typing ? 'block' : 'none';
         sendButton.disabled = typing;
         messageInput.disabled = typing;
+        interruptButton.style.display = typing ? 'block' : 'none';
+    }
+
+    async function interruptSession() {
+        if (!currentSessionId) return;
+        try {
+            const response = await fetch(`/interrupt?id=${currentSessionId}`);
+            const result = await response.json();
+        } catch (error) {
+            console.error('打断失败:', error);
+        }
     }
 
     async function sendMessage() {
@@ -460,16 +493,17 @@
         setTyping(true);
 
         try {
-            const eventSource = new EventSource(`/chat?message=${encodeURIComponent(message)}&id=${currentSessionId}`);
+            currentEventSource = new EventSource(`/chat?message=${encodeURIComponent(message)}&id=${currentSessionId}`);
             let assistantMessage = '';
             let messageDiv = null;
 
-            eventSource.onmessage = (event) => {
+            currentEventSource.onmessage = (event) => {
                 const line = event.data;
 
                 // 检查结束标记
                 if (line === '[DONE]') {
-                    eventSource.close();
+                    currentEventSource.close();
+                    currentEventSource = null;
                     setTyping(false);
                     // 刷新会话列表
                     loadSessionList();
@@ -482,7 +516,6 @@
                         const delta = data.choices[0].delta;
                         if (delta.content) {
                             if (!messageDiv) {
-                                setTyping(false);
                                 messageDiv = document.createElement('div');
                                 messageDiv.className = 'message assistant-message';
                                 chatContainer.appendChild(messageDiv);
@@ -500,8 +533,9 @@
                 }
             };
 
-            eventSource.onerror = (error) => {
-                eventSource.close();
+            currentEventSource.onerror = (error) => {
+                currentEventSource.close();
+                currentEventSource = null;
                 setTyping(false);
                 if (!assistantMessage) {
                     addMessage('抱歉，我没有收到响应。', false);

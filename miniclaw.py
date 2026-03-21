@@ -178,7 +178,7 @@ async def chat(id: str, message: str):
 
 
 # 中断接口
-@app.post("/interrupt")
+@app.api_route("/interrupt", methods=["GET", "POST"])
 async def interrupt(id: str):
     if id in session_flag:
         session_flag[id] = False
