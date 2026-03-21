@@ -2,8 +2,8 @@ import importlib
 import json
 import logging
 import os
-import subprocess
 import sys
+from asyncio import subprocess
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -24,12 +24,10 @@ client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
 
 
 # 执行本地命令
-def execute_command(command: str, encoding: str, timeout: int) -> str:
-    try:
-        result = subprocess.run(command, capture_output=True, shell=True, errors="replace", encoding=encoding, timeout=timeout)
-        return f"RETURN_CODE: {result.returncode}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    except Exception as e:
-        return f"ERROR: {str(e)}"
+async def execute_command(command: str) -> str:
+    process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    return f"{stdout.decode()}{stderr.decode()}"
 
 
 # 工具定义
@@ -37,13 +35,11 @@ tools = [{
     "type": "function",
     "function": {
         "name": "execute_command",
-        "description": "执行本地命令",
+        "description": "execute shell command",
         "parameters": {
             "type": "object",
             "properties": {
-                "command": {"type": "string", "description": "要执行的命令"},
-                "encoding": {"type": "string", "description": "编码格式", "default": "utf-8"},
-                "timeout": {"type": "integer", "description": "超时时间", "default": 30}
+                "command": {"type": "string", "description": "shell command"}
             },
             "required": ["command"],
         },
@@ -84,7 +80,7 @@ async def execute_plugins(action: str, **kwargs):
             try:
                 await func(**kwargs)
             except Exception as e:
-                logging.error(e)
+                logging.error(f"执行插件 {module.__name__} 的 {action} 钩子函数失败: {e}")
 
 
 # 生命周期管理
@@ -143,7 +139,7 @@ async def chat(id: str, message: str):
                 await execute_plugins(action="before_tool", id=id, messages=messages, tool_call=tool_call)
                 try:
                     args = json.loads(tool_call["function"]["arguments"])
-                    tool_content = execute_command(args.get("command", ""), args.get("encoding", "utf-8"), args.get("timeout", 30))
+                    tool_content = await execute_command(args.get("command", ""))
                 except json.JSONDecodeError:
                     tool_content = "Error: Invalid JSON arguments."
                 tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}

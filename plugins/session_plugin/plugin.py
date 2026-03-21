@@ -12,14 +12,15 @@ SESSION_DIR = "sessions"
 router = APIRouter(prefix="")
 
 
+# 加载会话消息
 def load_session_messages(id: str) -> list:
-    session_file = os.path.join(SESSION_DIR, f"{id}.json")
-    if os.path.exists(session_file):
-        try:
-            with open(session_file, "r", encoding="utf-8") as f:
+    filepath = os.path.join(SESSION_DIR, f"{id}.json")
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            try:
                 return json.load(f)
-        except Exception as e:
-            logging.error(f"加载会话文件失败 {id}: {e}")
+            except json.JSONDecodeError:
+                return []
     return []
 
 
@@ -28,25 +29,21 @@ def load_session_messages(id: str) -> list:
 async def get_sessions():
     sessions = []
     for filename in os.listdir(SESSION_DIR):
+        filepath = os.path.join(SESSION_DIR, filename)
         if filename.endswith('.json'):
-            id = filename[:-5]  # 去掉 .json
-            file_path = os.path.join(SESSION_DIR, filename)
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    title = "对话"
-                    for msg in data:
-                        if msg.get('role') == 'user':
-                            content = msg.get('content', '')
-                            title = content[:20] + '...' if len(content) > 20 else content
-                            break
-                    sessions.append({
-                        "id": id,
-                        "title": title,
-                        "updated_at": os.path.getmtime(file_path)
-                    })
-            except Exception as e:
-                logging.error(f"读取会话文件失败 {filename}: {e}")
+            id = filename[:-5]
+            messages = load_session_messages(id)
+            title = "对话"
+            for msg in messages:
+                if msg.get('role') == 'user':
+                    content = msg.get('content', '')
+                    title = content[:20] + '...' if len(content) > 20 else content
+                    break
+            sessions.append({
+                "id": id,
+                "title": title,
+                "updated_at": os.path.getmtime(filepath)
+            })
     # 按更新时间排序
     sessions.sort(key=lambda x: x['updated_at'], reverse=True)
     return JSONResponse(content=sessions)
@@ -84,11 +81,8 @@ async def before_chat(id: str, messages: list, user_content: str, **kwargs):
 
     system_content = ""
     if os.path.exists("AGENTS.md"):
-        try:
-            with open("AGENTS.md", "r", encoding="utf-8") as f:
-                system_content = f.read()
-        except Exception as e:
-            logging.error(f"读取 AGENTS.md 失败: {e}")
+        with open("AGENTS.md", "r", encoding="utf-8") as f:
+            system_content = f.read()
     messages.clear()
     messages.append({"role": "system", "content": system_content})
     messages.append({"role": "user", "content": user_content})
@@ -97,11 +91,8 @@ async def before_chat(id: str, messages: list, user_content: str, **kwargs):
 
 async def after_chat(id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
     session_file = os.path.join(SESSION_DIR, f"{id}.json")
-    try:
-        with open(session_file, "w", encoding="utf-8") as f:
-            json.dump(messages, f, ensure_ascii=False)
-    except Exception as e:
-        logging.error(f"保存会话文件失败 {id}: {e}")
+    with open(session_file, "w", encoding="utf-8") as f:
+        json.dump(messages, f, ensure_ascii=False)
 
 
 async def before_model(id: str, messages: list, **kwargs):
