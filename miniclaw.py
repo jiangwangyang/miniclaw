@@ -131,7 +131,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
                 chunk = json.loads(json.dumps(chunk, default=lambda o: o.__dict__))
                 delta = chunk["choices"][0]["delta"]
                 # SSE 流式响应
-                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({"role": "assistant", "content": delta["content"]}, ensure_ascii=False)}\n\n"
                 # 收集工具调用
                 for tool_call in delta["tool_calls"] or []:
                     if tool_call["index"] < len(assistant_tool_calls):
@@ -141,6 +141,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
                 # 收集普通文本
                 if delta["content"]:
                     assistant_content += delta["content"]
+            yield f"data: {json.dumps({"role": "assistant", "content": "", "tool_calls": assistant_tool_calls}, ensure_ascii=False)}\n\n"
             messages.append({"role": "assistant", "content": assistant_content, "tool_calls": assistant_tool_calls})
             # after model
             await execute_plugins(action="after_model", session_id=session_id, messages=messages)
