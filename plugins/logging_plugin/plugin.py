@@ -9,12 +9,12 @@ logging.basicConfig(
 )
 
 
-async def start(app: FastAPI, **kwargs):
-    logging.info("start")
+async def before_application(app: FastAPI, **kwargs):
+    logging.info("logging plugin started")
 
 
-async def stop(app: FastAPI, **kwargs):
-    logging.info("stop")
+async def after_application(app: FastAPI, **kwargs):
+    logging.info("logging plugin stopped")
 
 
 async def before_chat(id: str, messages: list, user_content: str, **kwargs):

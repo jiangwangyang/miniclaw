@@ -59,7 +59,7 @@ async def get_session(id: str):
     return JSONResponse(content={"messages": filtered_messages})
 
 
-async def start(app: FastAPI, **kwargs):
+async def before_application(app: FastAPI, **kwargs):
     # 创建会话目录
     if not os.path.exists(SESSION_DIR):
         os.makedirs(SESSION_DIR)
@@ -69,7 +69,7 @@ async def start(app: FastAPI, **kwargs):
     logging.info("Session plugin started")
 
 
-async def stop(app: FastAPI, **kwargs):
+async def after_application(app: FastAPI, **kwargs):
     # 记录日志
     logging.info("Session plugin stopped")
 

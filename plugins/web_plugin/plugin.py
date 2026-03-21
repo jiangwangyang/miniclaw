@@ -527,12 +527,12 @@ async def index():
     return HTML_CONTENT
 
 
-async def start(app: FastAPI, **kwargs):
+async def before_application(app: FastAPI, **kwargs):
     app.include_router(router)
     logging.info("Web plugin started")
 
 
-async def stop(app: FastAPI, **kwargs):
+async def after_application(app: FastAPI, **kwargs):
     logging.info("Web plugin stopped")
 
 
