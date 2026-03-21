@@ -79,6 +79,7 @@ async def before_chat(id: str, messages: list, user_content: str, **kwargs):
     if loaded_messages:
         messages.clear()
         messages.extend(loaded_messages)
+        messages.append({"role": "user", "content": user_content})
         return
 
     system_content = ""
