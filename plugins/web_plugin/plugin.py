@@ -1,11 +1,7 @@
-import json
 import logging
-import os
 
 from fastapi import FastAPI, APIRouter
-from fastapi.responses import HTMLResponse, JSONResponse
-
-SESSIONS_DIR = "sessions"
+from fastapi.responses import HTMLResponse
 
 # HTML 内容字符串
 HTML_CONTENT = """
@@ -325,7 +321,7 @@ HTML_CONTENT = """
         // 加载会话列表
         async function loadSessionList() {
             try {
-                const response = await fetch('/api/sessions');
+                const response = await fetch('/session/list');
                 const sessions = await response.json();
 
                 sessionList.innerHTML = '';
@@ -372,7 +368,7 @@ HTML_CONTENT = """
             localStorage.setItem('miniclaw_current_session', sessionId);
 
             try {
-                const response = await fetch(`/api/sessions/${sessionId}`);
+                const response = await fetch(`/session/${sessionId}`);
                 const data = await response.json();
 
                 // 清空聊天区域
@@ -531,81 +527,34 @@ async def index():
     return HTML_CONTENT
 
 
-# 获取所有会话列表
-@router.get("/api/sessions")
-async def get_sessions():
-    sessions = []
-    if os.path.exists(SESSIONS_DIR):
-        for filename in os.listdir(SESSIONS_DIR):
-            if filename.endswith('.json'):
-                session_id = filename[:-5]  # 去掉 .json
-                file_path = os.path.join(SESSIONS_DIR, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        # 获取第一条用户消息作为标题，或使用默认标题
-                        title = "对话"
-                        for msg in data:
-                            if msg.get('role') == 'user':
-                                title = msg.get('content', '')[:20] + '...' if len(msg.get('content', '')) > 20 else msg.get('content', '')
-                                break
-                        sessions.append({
-                            "id": session_id,
-                            "title": title,
-                            "updated_at": os.path.getmtime(file_path)
-                        })
-                except Exception as e:
-                    logging.error(f"读取会话文件失败 {filename}: {e}")
-
-    # 按更新时间排序
-    sessions.sort(key=lambda x: x['updated_at'], reverse=True)
-    return JSONResponse(content=sessions)
-
-
-# 获取指定会话的消息
-@router.get("/api/sessions/{session_id}")
-async def get_session(session_id: str):
-    file_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-    if not os.path.exists(file_path):
-        return JSONResponse(content={"messages": []})
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            messages = json.load(f)
-        filtered_messages = [msg for msg in messages if msg.get('role') != 'system']
-        return JSONResponse(content={"messages": filtered_messages})
-    except Exception as e:
-        logging.error(f"读取会话失败 {session_id}: {e}")
-        return JSONResponse(content={"messages": [], "error": str(e)})
-
-
 async def start(app: FastAPI, **kwargs):
     app.include_router(router)
-    logging.info("挂载web页面")
+    logging.info("Web plugin started")
 
 
 async def stop(app: FastAPI, **kwargs):
+    logging.info("Web plugin stopped")
+
+
+async def before_chat(id: str, messages: list, user_content: str, **kwargs):
     pass
 
 
-async def before_chat(messages: list, user_content: str, **kwargs):
+async def after_chat(id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
     pass
 
 
-async def after_chat(messages: list, user_content: str, assistant_content: str, **kwargs):
+async def before_model(id: str, messages: list, **kwargs):
     pass
 
 
-async def before_model(messages: list, **kwargs):
+async def after_model(id: str, messages: list, **kwargs):
     pass
 
 
-async def after_model(messages: list, **kwargs):
+async def before_tool(id: str, messages: list, tool_call: dict, **kwargs):
     pass
 
 
-async def before_tool(messages: list, tool_call: dict, **kwargs):
-    pass
-
-
-async def after_tool(messages: list, tool_call: dict, tool_response: str, **kwargs):
+async def after_tool(id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
     pass
