@@ -19,9 +19,12 @@ logging.basicConfig(
 BASE_URL = "https://api.minimaxi.com/v1"
 API_KEY = os.getenv("MINIMAX_API_KEY")
 MODEL = "MiniMax-M2.7"
-SKILLS_DIR = os.path.expanduser("~/.agents/skills/")
-PLUGINS_DIR = "plugins/"
+MINICLAW_DIR = os.path.dirname(os.path.abspath(__file__))
+AGENTS_FILE_LIST = ["AGENTS.md", os.path.join(MINICLAW_DIR, "AGENTS.md"), os.path.expanduser("~/.miniclaw/AGENTS.md"), os.path.expanduser("~/.agents/AGENTS.md")]
+SKILLS_DIR_LIST = ["skills/", os.path.join(MINICLAW_DIR, "skills/"), os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
+PLUGINS_DIR_LIST = ["plugins/", os.path.join(MINICLAW_DIR, "plugins/"), os.path.expanduser("~/.miniclaw/plugins/"), os.path.expanduser("~/.agents/plugins/")]
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
+agents: str = ""
 skills: list[dict[str, str]] = []
 plugins: list[object] = []
 session_flag: dict[str, bool] = {}
@@ -48,45 +51,68 @@ async def execute_command(command: str) -> str:
     return f"{stdout.decode()}{stderr.decode()}"
 
 
+# 加载AGENTS文件
+def load_agents():
+    global agents
+    for agents_file in AGENTS_FILE_LIST:
+        if os.path.isfile(agents_file):
+            with open(agents_file, "r", encoding="utf-8") as f:
+                agents = f.read()
+            break
+    logging.info(f"Loaded agents: {json.dumps(agents, ensure_ascii=False)}")
+
+
 # 加载技能
 def load_skills():
     skills.clear()
-    if not os.path.exists(SKILLS_DIR):
-        return
+    loaded_skill_names = set()
     # 遍历技能目录
-    for entry in os.listdir(SKILLS_DIR):
-        skill_path = os.path.join(SKILLS_DIR, entry)
-        skill_file_path = os.path.join(skill_path, "SKILL.md")
-        if not os.path.isdir(skill_path) or not os.path.isfile(skill_file_path):
+    for skills_dir in SKILLS_DIR_LIST:
+        if not os.path.exists(skills_dir):
             continue
-        # 尝试读取 SKILL.md 提取 name 和 description
-        with open(skill_file_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        if len(lines) >= 4 and lines[0].strip() == "---" and lines[1].strip().startswith("name:") and lines[2].strip().startswith("description:"):
-            name = lines[1].strip()[5:].strip()
-            description = lines[2].strip()[12:].strip()
-            if name == entry:
-                skills.append({"name": name, "description": description, "path": skill_file_path})
+        # 遍历技能
+        for entry in os.listdir(skills_dir):
+            if entry in loaded_skill_names:
+                continue
+            skill_file_path = os.path.join(skills_dir, entry, "SKILL.md")
+            if not os.path.isfile(skill_file_path):
+                continue
+            # 尝试读取 SKILL.md 提取 name 和 description
+            with open(skill_file_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            if len(lines) >= 4 and lines[0].strip() == "---" and lines[1].strip().startswith("name:") and lines[2].strip().startswith("description:"):
+                name = lines[1].strip()[5:].strip()
+                description = lines[2].strip()[12:].strip()
+                if name == entry:
+                    skills.append({"name": name, "description": description, "path": skill_file_path})
+                    loaded_skill_names.add(name)
+    logging.info(f"Loaded skills: {json.dumps(skills, ensure_ascii=False)}")
 
 
 # 加载插件
 def load_plugins():
     plugins.clear()
-    # 加入插件目录
-    if not os.path.exists(PLUGINS_DIR):
-        return
-    if PLUGINS_DIR not in sys.path:
-        sys.path.insert(0, PLUGINS_DIR)
-    # 加载插件
-    for entry in os.listdir(PLUGINS_DIR):
-        plugin_path = os.path.join(PLUGINS_DIR, entry)
-        if os.path.isdir(plugin_path) and os.path.isfile(os.path.join(plugin_path, "plugin.py")):
-            module_name = f"{entry}.plugin"
-            try:
-                module = importlib.import_module(module_name)
-                plugins.append(module)
-            except Exception as e:
-                logging.error(f"加载插件 {entry} 失败: {e}")
+    loaded_plugin_names = set()
+    # 遍历插件目录
+    for plugins_dir in PLUGINS_DIR_LIST:
+        if not os.path.exists(plugins_dir):
+            continue
+        # 加入插件目录到 sys.path
+        if plugins_dir not in sys.path:
+            sys.path.insert(0, plugins_dir)
+        # 加载插件
+        for entry in os.listdir(plugins_dir):
+            if entry in loaded_plugin_names:
+                continue
+            if os.path.isfile(os.path.join(plugins_dir, entry, "plugin.py")):
+                module_name = f"{entry}.plugin"
+                try:
+                    module = importlib.import_module(module_name)
+                    plugins.append(module)
+                    loaded_plugin_names.add(entry)
+                except Exception as e:
+                    logging.error(f"加载插件 {entry} 失败: {e}")
+    logging.info(f"Loaded plugins: {plugins}")
 
 
 # 执行插件钩子函数
@@ -111,6 +137,7 @@ async def lifespan(app: FastAPI):
     await execute_plugins(action="after_application", app=app)
 
 
+load_agents()
 load_skills()
 load_plugins()
 app: FastAPI = FastAPI(lifespan=lifespan)
@@ -126,10 +153,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
         # session start
         session_flag[session_id] = True
         assistant_content = ""
-        system_content = f"# Available Skills\n{skills}"
-        if os.path.exists("AGENTS.md"):
-            with open("AGENTS.md", "r", encoding="utf-8") as f:
-                system_content += f.read()
+        system_content = f"# Available Skills\n{json.dumps(skills, ensure_ascii=False)}\n\n{agents}"
         messages = [
             {"role": "system", "content": system_content},
             {"role": "user", "content": user_content}
@@ -213,4 +237,4 @@ async def interrupt(session_id: str = Query(..., alias="id")):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("miniclaw:app", host="0.0.0.0", port=11223, reload=True)
+    uvicorn.run("miniclaw:app", host="0.0.0.0", port=11223)
