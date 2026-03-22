@@ -4,19 +4,19 @@ from fastapi import FastAPI
 
 
 async def before_application(app: FastAPI, **kwargs):
-    logging.info("logging plugin started")
+    logging.info("Logging plugin started")
 
 
 async def after_application(app: FastAPI, **kwargs):
-    logging.info("logging plugin stopped")
+    logging.info("Logging plugin stopped")
 
 
 async def before_chat(session_id: str, messages: list, user_content: str, **kwargs):
-    logging.info(user_content)
+    logging.info(f"User: {user_content}")
 
 
 async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
-    logging.info(assistant_content)
+    logging.info(f"Assistant: {assistant_content}")
 
 
 async def before_model(session_id: str, messages: list, **kwargs):
@@ -24,7 +24,7 @@ async def before_model(session_id: str, messages: list, **kwargs):
 
 
 async def after_model(session_id: str, messages: list, **kwargs):
-    logging.info(messages[-1])
+    logging.info(f"Model: {messages[-1]}")
 
 
 async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs):
@@ -32,4 +32,4 @@ async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs
 
 
 async def after_tool(session_id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
-    logging.info(messages[-1])
+    logging.info(f"Tool: {messages[-1]}")

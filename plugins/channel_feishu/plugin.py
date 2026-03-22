@@ -90,15 +90,12 @@ def event_listener():
     ws_client.start()
 
 
-# 启动消费者线程
-message_consumer_thread = threading.Thread(target=message_consumer, args=())
-message_consumer_thread.start()
-# 启动消息监听线程
-event_listener_thread = threading.Thread(target=event_listener, args=())
-event_listener_thread.start()
-
-
 async def before_application(app: FastAPI, **kwargs):
+    # 启动 消费者线程 消息监听线程
+    message_consumer_thread = threading.Thread(target=message_consumer, args=())
+    event_listener_thread = threading.Thread(target=event_listener, args=())
+    message_consumer_thread.start()
+    event_listener_thread.start()
     logging.info("Feishu plugin started")
 
 

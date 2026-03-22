@@ -5,14 +5,10 @@ from fastapi import FastAPI, APIRouter
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-# 获取 static 目录路径
 STATIC_DIR = Path(__file__).parent / "static"
-
-# 初始化路由
 router = APIRouter(prefix="")
 
 
-# 首页
 @router.get("/")
 @router.get("/index")
 @router.get("/index.html")
@@ -22,7 +18,6 @@ async def index():
 
 
 async def before_application(app: FastAPI, **kwargs):
-    # 挂载静态文件目录到 /static
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     app.include_router(router)
     logging.info("Web plugin started")

@@ -5,16 +5,13 @@ import os
 from fastapi import FastAPI, APIRouter, Path
 from fastapi.responses import JSONResponse
 
-# 会话存储目录
-SESSION_DIR = "sessions"
-
-# 初始化路由
+SESSIONS_DIR = "sessions"
 router = APIRouter(prefix="")
 
 
 # 加载会话消息
 def load_session_messages(session_id: str) -> list:
-    filepath = os.path.join(SESSION_DIR, f"{session_id}.json")
+    filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
     if os.path.exists(filepath):
         with open(filepath, "r", encoding="utf-8") as f:
             try:
@@ -28,8 +25,8 @@ def load_session_messages(session_id: str) -> list:
 @router.get("/session/list")
 async def get_sessions():
     sessions = []
-    for filename in os.listdir(SESSION_DIR):
-        filepath = os.path.join(SESSION_DIR, filename)
+    for filename in os.listdir(SESSIONS_DIR):
+        filepath = os.path.join(SESSIONS_DIR, filename)
         if filename.endswith('.json'):
             session_id = filename[:-5]
             messages = load_session_messages(session_id)
@@ -57,17 +54,13 @@ async def get_session(session_id: str = Path(..., alias="id")):
 
 
 async def before_application(app: FastAPI, **kwargs):
-    # 创建会话目录
-    if not os.path.exists(SESSION_DIR):
-        os.makedirs(SESSION_DIR)
-    # 注册路由
+    if not os.path.exists(SESSIONS_DIR):
+        os.makedirs(SESSIONS_DIR)
     app.include_router(router)
-    # 记录日志
     logging.info("Session plugin started")
 
 
 async def after_application(app: FastAPI, **kwargs):
-    # 记录日志
     logging.info("Session plugin stopped")
 
 
@@ -81,7 +74,7 @@ async def before_chat(session_id: str, messages: list, user_content: str, **kwar
 
 
 async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
-    session_file = os.path.join(SESSION_DIR, f"{session_id}.json")
+    session_file = os.path.join(SESSIONS_DIR, f"{session_id}.json")
     with open(session_file, "w", encoding="utf-8") as f:
         json.dump(messages, f, ensure_ascii=False)
 
