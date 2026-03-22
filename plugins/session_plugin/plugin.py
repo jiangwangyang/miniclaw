@@ -53,6 +53,14 @@ async def get_session(session_id: str = Path(..., alias="id")):
     return JSONResponse(content={"messages": filtered_messages})
 
 
+@router.delete("/session/{id}")
+async def delete_session(session_id: str = Path(..., alias="id")):
+    filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    return JSONResponse(content={"success": True, "message": "会话已删除"})
+
+
 async def before_application(app: FastAPI, **kwargs):
     if not os.path.exists(SESSIONS_DIR):
         os.makedirs(SESSIONS_DIR)

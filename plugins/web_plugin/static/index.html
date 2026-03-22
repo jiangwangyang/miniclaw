@@ -25,6 +25,10 @@
             --tool-bg: #f0f2f4;
             --tool-border: #e2e5e8;
             --tool-text: #8b95a0;
+            
+            /* 删除按钮颜色 */
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
         }
 
         * {
@@ -169,6 +173,7 @@
             align-items: center;
             gap: 12px;
             border: 1px solid transparent;
+            position: relative;
         }
 
         .session-item:hover {
@@ -176,10 +181,27 @@
             border-color: var(--border-color);
         }
 
+        .session-item:hover .delete-btn {
+            opacity: 1;
+        }
+
         .session-item.active {
             background: var(--charcoal);
             color: white;
             border-color: var(--charcoal);
+        }
+
+        .session-item.active:hover {
+            background: #2d3a43;
+        }
+
+        .session-item.active .delete-btn {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .session-item.active .delete-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
         }
 
         .session-item-icon {
@@ -198,6 +220,32 @@
             font-size: 11px;
             opacity: 0.5;
             font-weight: 400;
+        }
+
+        /* 删除按钮样式 */
+        .delete-btn {
+            opacity: 0;
+            padding: 6px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--slate-gray);
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .delete-btn svg {
+            width: 14px;
+            height: 14px;
         }
 
         /* 主内容区域 */
@@ -665,6 +713,109 @@
             background: var(--bg-primary);
         }
 
+        /* 确认对话框样式 */
+        .confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .confirm-dialog {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 360px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .confirm-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 24px;
+        }
+
+        .confirm-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--charcoal);
+            margin-bottom: 8px;
+        }
+
+        .confirm-text {
+            font-size: 14px;
+            color: var(--slate-gray);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .confirm-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            border: none;
+        }
+
+        .confirm-btn.cancel {
+            background: var(--bg-primary);
+            color: var(--charcoal);
+            border: 1px solid var(--border-color);
+        }
+
+        .confirm-btn.cancel:hover {
+            background: var(--border-color);
+        }
+
+        .confirm-btn.danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .confirm-btn.danger:hover {
+            background: var(--danger-hover);
+        }
+
         /* 响应式 */
         @media (max-width: 768px) {
             .sidebar {
@@ -791,12 +942,79 @@
                 item.innerHTML = `
                     <span class="session-item-icon">💬</span>
                     <span class="session-item-text">${escapeHtml(session.title)}</span>
+                    <button class="delete-btn" onclick="event.stopPropagation(); confirmDeleteSession('${session.id}')" title="删除会话">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                    </button>
                 `;
                 item.onclick = () => loadSession(session.id);
                 sessionList.appendChild(item);
             });
         } catch (error) {
             console.error('加载会话列表失败:', error);
+        }
+    }
+
+    // 确认删除会话
+    function confirmDeleteSession(sessionId) {
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay';
+        overlay.innerHTML = `
+            <div class="confirm-dialog">
+                <div class="confirm-icon">🗑️</div>
+                <div class="confirm-title">删除会话</div>
+                <div class="confirm-text">确定要删除这个会话吗？此操作无法撤销。</div>
+                <div class="confirm-buttons">
+                    <button class="confirm-btn cancel" onclick="closeConfirmDialog()">取消</button>
+                    <button class="confirm-btn danger" onclick="deleteSession('${sessionId}')">删除</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        
+        // 点击遮罩层关闭
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeConfirmDialog();
+            }
+        });
+    }
+
+    // 关闭确认对话框
+    function closeConfirmDialog() {
+        const overlay = document.querySelector('.confirm-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
+    // 删除会话
+    async function deleteSession(sessionId) {
+        closeConfirmDialog();
+        
+        try {
+            const response = await fetch(`/session/${sessionId}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                // 如果删除的是当前会话，开始新对话
+                if (currentSessionId === sessionId) {
+                    startNewChat();
+                }
+                // 刷新会话列表
+                loadSessionList();
+            } else {
+                console.error('删除失败:', result.message);
+            }
+        } catch (error) {
+            console.error('删除会话失败:', error);
         }
     }
 
