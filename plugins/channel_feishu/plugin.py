@@ -40,7 +40,7 @@ def send_feishu_message(receive_id: str, content: str):
         lark.logger.error(f"client.im.v1.message.create failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}, resp: \n{json.dumps(json.loads(response.raw.content), ensure_ascii=False)}")
 
 
-# 用户消息消费者 将用户消息发送到模型
+# 用户消息消费者 按序消费飞书消息 将用户消息发送到模型并回复
 def message_consumer():
     while True:
         try:
@@ -52,15 +52,29 @@ def message_consumer():
             response = requests.post(f"{CHAT_URL}?id={open_id}&message={user_content}", stream=True)
             response.raise_for_status()
             # 遍历模型返回
-            for _ in response.iter_lines():
-                pass
+            text = ""
+            for line in response.iter_lines():
+                line = line.decode("utf-8").strip() if line else ""
+                if not line.startswith("data:"):
+                    continue
+                line = line[5:].strip()
+                if line == "[DONE]":
+                    break
+                data = json.loads(line)
+                if not data["role"] == "assistant":
+                    continue
+                text += data["content"]
+                if data["content"] == "" and text:
+                    # 发送飞书消息
+                    send_feishu_message(open_id, text)
+                    text = ""
             # 处理完成
             message_queue.task_done()
         except queue.Empty:
             pass
 
 
-# 飞书消息监听器 将飞书消息放入队列
+# 飞书消息监听器 将飞书消息放入队列 确保按序处理
 def event_listener():
     def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         lark.logger.info(lark.JSON.marshal(data))
@@ -76,14 +90,15 @@ def event_listener():
     ws_client.start()
 
 
+# 启动消费者线程
+message_consumer_thread = threading.Thread(target=message_consumer, args=())
+message_consumer_thread.start()
+# 启动消息监听线程
+event_listener_thread = threading.Thread(target=event_listener, args=())
+event_listener_thread.start()
+
+
 async def before_application(app: FastAPI, **kwargs):
-    # 启动消费者线程
-    message_consumer_thread = threading.Thread(target=message_consumer, args=())
-    message_consumer_thread.start()
-    # 事件监听客户端
-    event_listener_thread = threading.Thread(target=event_listener, args=())
-    event_listener_thread.start()
-    # 记录日志
     logging.info("Feishu plugin started")
 
 
@@ -104,7 +119,7 @@ async def before_model(session_id: str, messages: list, **kwargs):
 
 
 async def after_model(session_id: str, messages: list, **kwargs):
-    send_feishu_message(session_id, messages[-1]["content"])
+    pass
 
 
 async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs):
@@ -112,4 +127,4 @@ async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs
 
 
 async def after_tool(session_id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
-    send_feishu_message(session_id, json.loads(tool_call["function"]["arguments"])["command"] + "\n" + tool_content)
+    pass
