@@ -6,8 +6,7 @@
     <title>MiniClaw Chat</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
-          rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Modern Minimalist Theme */
@@ -21,11 +20,6 @@
             --shadow-soft: 0 2px 8px rgba(54, 69, 79, 0.08);
             --shadow-elevated: 0 4px 20px rgba(54, 69, 79, 0.12);
             --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            /* Tool block colors */
-            --tool-bg: #f1f5f9;
-            --tool-border: #cbd5e1;
-            --tool-header-bg: #e2e8f0;
-            --tool-icon-bg: #3b82f6;
         }
 
         * {
@@ -195,6 +189,12 @@
             white-space: nowrap;
         }
 
+        .session-item-time {
+            font-size: 11px;
+            opacity: 0.5;
+            font-weight: 400;
+        }
+
         /* 主内容区域 */
         .main-content {
             flex: 1;
@@ -215,6 +215,17 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--light-gray), transparent);
         }
 
         .header-left {
@@ -314,113 +325,6 @@
             opacity: 0.5;
             margin-top: 8px;
             font-weight: 500;
-        }
-
-        /* Tool 消息样式 - 可折叠 */
-        .tool-message {
-            align-self: flex-start;
-            max-width: 85%;
-            background: var(--tool-bg);
-            border: 1px solid var(--tool-border);
-            border-radius: 12px;
-            overflow: visible;
-            animation: messageSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .tool-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            background: var(--tool-header-bg);
-            cursor: pointer;
-            user-select: none;
-            transition: background 0.2s ease;
-            border-radius: 11px 11px 0 0;
-        }
-
-        .tool-header:hover {
-            background: #c8d3de;
-        }
-
-        .tool-icon {
-            width: 26px;
-            height: 26px;
-            background: var(--tool-icon-bg);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
-
-        .tool-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--charcoal);
-        }
-
-        .tool-badge {
-            font-size: 10px;
-            padding: 2px 8px;
-            background: var(--tool-icon-bg);
-            color: white;
-            border-radius: 10px;
-            font-weight: 500;
-            margin-left: auto;
-            margin-right: 8px;
-        }
-
-        .tool-toggle {
-            font-size: 10px;
-            color: var(--slate-gray);
-            transition: transform 0.3s ease;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .tool-toggle.expanded {
-            transform: rotate(180deg);
-        }
-
-        .tool-preview {
-            padding: 10px 14px;
-            font-size: 12px;
-            color: var(--slate-gray);
-            overflow: hidden;
-            line-height: 1.4;
-            max-height: 50px;
-            border-top: 1px dashed var(--tool-border);
-            background: white;
-        }
-
-        .tool-content {
-            display: none;
-            padding: 12px 14px;
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-            background: white;
-            border-top: 1px dashed var(--tool-border);
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .tool-content.expanded {
-            display: block;
-        }
-
-        .tool-content pre {
-            margin: 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: var(--charcoal);
         }
 
         /* 空状态 */
@@ -532,6 +436,7 @@
             cursor: not-allowed;
         }
 
+        /* 自动调整 textarea 高度 */
         .message-input::-webkit-scrollbar {
             width: 4px;
         }
@@ -618,6 +523,31 @@
             30% { transform: translateY(-6px); opacity: 1; }
         }
 
+        /* 快捷提示 */
+        .quick-hints {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .quick-hint {
+            padding: 8px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--slate-gray);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .quick-hint:hover {
+            border-color: var(--charcoal);
+            color: var(--charcoal);
+            background: var(--bg-primary);
+        }
+
         /* 响应式 */
         @media (max-width: 768px) {
             .sidebar {
@@ -663,9 +593,7 @@
             <div class="empty-state-icon">✨</div>
             <div class="empty-state-title">开始新对话</div>
             <div class="empty-state-text">点击左侧"新对话"按钮，或选择一个历史会话开始聊天</div>
-            <div class="empty-state-hint">
-                💡 输入消息后按 Enter 发送（Shift+Enter 换行），点击中断按钮可停止生成
-            </div>
+            <div class="empty-state-hint">💡 输入消息后按 Enter 发送（Shift+Enter 换行），点击中断按钮可停止生成</div>
         </div>
     </div>
 
@@ -676,11 +604,8 @@
     <div class="input-wrapper">
         <div class="input-container">
             <label for="messageInput"></label>
-            <textarea class="message-input" id="messageInput" placeholder="输入消息..." maxlength="2000" disabled
-                      rows="1"></textarea>
-            <button class="interrupt-button btn" id="interruptButton" onclick="interruptSession()"
-                    style="display: none;">打断
-            </button>
+            <textarea class="message-input" id="messageInput" placeholder="输入消息..." maxlength="2000" disabled rows="1"></textarea>
+            <button class="interrupt-button btn" id="interruptButton" onclick="interruptSession()" style="display: none;">打断</button>
             <button class="send-button btn" id="sendButton" onclick="sendMessage()" disabled>发送</button>
         </div>
     </div>
@@ -700,14 +625,20 @@
     let isTyping = false;
     let currentEventSource = null;
 
+    // 自动调整 textarea 高度
     function autoResize() {
         messageInput.style.height = 'auto';
         messageInput.style.height = Math.min(messageInput.scrollHeight, 160) + 'px';
     }
 
+    // 页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
         loadSessionList();
+
+        // 监听输入事件，自动调整高度
         messageInput.addEventListener('input', autoResize);
+
+        // 回车发送，Shift+Enter 换行
         messageInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -715,6 +646,7 @@
             }
         });
 
+        // 自动初始化会话：尝试恢复上次会话，否则创建新会话
         const savedSessionId = localStorage.getItem('miniclaw_current_session');
         if (savedSessionId) {
             loadSession(savedSessionId);
@@ -723,16 +655,21 @@
         }
     });
 
+    // 加载会话列表
     async function loadSessionList() {
         try {
             const response = await fetch('/session/list');
             const sessions = await response.json();
+
             sessionList.innerHTML = '';
             sessions.forEach(session => {
                 const item = document.createElement('div');
                 item.className = 'session-item';
                 item.dataset.id = session.id;
-                item.innerHTML = '<span class="session-item-icon">💬</span><span class="session-item-text">' + escapeHtml(session.title) + '</span>';
+                item.innerHTML = `
+                    <span class="session-item-icon">💬</span>
+                    <span class="session-item-text">${escapeHtml(session.title)}</span>
+                `;
                 item.onclick = () => loadSession(session.id);
                 sessionList.appendChild(item);
             });
@@ -741,56 +678,87 @@
         }
     }
 
+    // 开始新对话
     function startNewChat() {
         currentSessionId = crypto.randomUUID();
         localStorage.setItem('miniclaw_current_session', currentSessionId);
+
+        // 清空聊天区域
         chatContainer.innerHTML = '';
         chatContainer.appendChild(emptyState);
         emptyState.style.display = 'flex';
+
+        // 清空输入框并重置高度
         messageInput.value = '';
         autoResize();
+
+        // 启用输入
         enableInput();
         sessionInfo.textContent = '新对话';
+
+        // 刷新列表并高亮当前会话
         loadSessionList().then(() => {
-            sessionList.querySelectorAll('.session-item').forEach(item => item.classList.remove('active'));
+            const items = sessionList.querySelectorAll('.session-item');
+            items.forEach(item => item.classList.remove('active'));
         });
     }
 
+    // 加载指定会话
     async function loadSession(sessionId) {
         currentSessionId = sessionId;
         localStorage.setItem('miniclaw_current_session', sessionId);
+
         try {
-            const response = await fetch('/session/' + sessionId);
+            const response = await fetch(`/session/${sessionId}`);
             const data = await response.json();
+
+            // 清空聊天区域
             chatContainer.innerHTML = '';
             emptyState.style.display = 'none';
+
+            // 渲染历史消息
             if (data.messages && data.messages.length > 0) {
                 data.messages.forEach(msg => {
                     if (msg.role === 'user') {
-                        addMessage(msg.content, 'user');
+                        addMessage(msg.content, true);
                     } else if (msg.role === 'assistant') {
-                        addMessage(msg.content, 'assistant');
-                    } else if (msg.role === 'tool') {
-                        addToolMessage(msg.content || '(无输出)');
+                        if (msg.content) {
+                            addMessage(msg.content, false);
+                        }
+                        if (msg.tool_calls) {
+                            for (let i = 0; i < msg.tool_calls.length; i++) {
+                                const arguments = msg.tool_calls[i].function.arguments
+                                const command = JSON.parse(arguments).command
+                                addMessage(command.slice(0, 100), false);
+                            }
+                        }
                     }
                 });
             } else {
                 chatContainer.appendChild(emptyState);
                 emptyState.style.display = 'flex';
             }
+
+            // 清空输入框并重置高度
             messageInput.value = '';
             autoResize();
+
+            // 启用输入
             enableInput();
-            sessionInfo.textContent = '会话: ' + sessionId.slice(0, 8) + '...';
-            sessionList.querySelectorAll('.session-item').forEach(item => {
+            sessionInfo.textContent = `会话: ${sessionId.slice(0, 8)}...`;
+
+            // 更新高亮
+            const items = sessionList.querySelectorAll('.session-item');
+            items.forEach(item => {
                 item.classList.toggle('active', item.dataset.id === sessionId);
             });
         } catch (error) {
             console.error('加载会话失败:', error);
-            addMessage('加载会话失败: ' + error.message, 'assistant');
+            addMessage('加载会话失败: ' + error.message, false);
         }
     }
 
+    // 启用输入
     function enableInput() {
         messageInput.disabled = false;
         sendButton.disabled = false;
@@ -798,65 +766,24 @@
     }
 
     function getCurrentTime() {
-        return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        const now = new Date();
+        return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     }
 
-    function addMessage(content, role) {
+    function addMessage(content, isUser) {
+        // 隐藏空状态
         emptyState.style.display = 'none';
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message ' + (role === 'user' ? 'user-message' : 'assistant-message');
-        messageDiv.innerHTML = escapeHtml(content) + '<div class="message-time">' + getCurrentTime() + '</div>';
+        messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+        messageDiv.innerHTML = `
+            ${escapeHtml(content)}
+            <div class="message-time">${getCurrentTime()}</div>
+        `;
         chatContainer.appendChild(messageDiv);
         scrollToBottom();
     }
 
-    function addToolMessage(content) {
-        emptyState.style.display = 'none';
-        
-        const toolDiv = document.createElement('div');
-        toolDiv.className = 'tool-message';
-        
-        // 生成预览：取前80字符或第一行
-        let preview = content ? content.substring(0, 80) : '(无输出)';
-        if (content && content.length > 80) {
-            preview += '...';
-        }
-        
-        toolDiv.innerHTML = 
-            '<div class="tool-header" onclick="toggleToolContent(this)">' +
-                '<div class="tool-icon">T</div>' +
-                '<span class="tool-title">Tool</span>' +
-                '<span class="tool-badge">RESULT</span>' +
-                '<span class="tool-toggle">▼</span>' +
-            '</div>' +
-            '<div class="tool-preview">' + escapeHtml(preview) + '</div>' +
-            '<div class="tool-content">' +
-                '<pre>' + escapeHtml(content || '(无输出)') + '</pre>' +
-            '</div>';
-        
-        chatContainer.appendChild(toolDiv);
-        scrollToBottom();
-    }
-
-    function toggleToolContent(header) {
-        const toolDiv = header.parentElement;
-        const content = toolDiv.querySelector('.tool-content');
-        const preview = toolDiv.querySelector('.tool-preview');
-        const toggle = toolDiv.querySelector('.tool-toggle');
-        
-        if (content.classList.contains('expanded')) {
-            content.classList.remove('expanded');
-            preview.style.display = 'block';
-            toggle.classList.remove('expanded');
-        } else {
-            content.classList.add('expanded');
-            preview.style.display = 'none';
-            toggle.classList.add('expanded');
-        }
-    }
-
     function escapeHtml(text) {
-        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -877,7 +804,8 @@
     async function interruptSession() {
         if (!currentSessionId) return;
         try {
-            await fetch('/interrupt?id=' + currentSessionId);
+            const response = await fetch(`/interrupt?id=${currentSessionId}`);
+            const result = await response.json();
         } catch (error) {
             console.error('打断失败:', error);
         }
@@ -887,66 +815,72 @@
         const message = messageInput.value.trim();
         if (!message || isTyping || !currentSessionId) return;
 
-        addMessage(message, 'user');
+        // 添加用户消息
+        addMessage(message, true);
         messageInput.value = '';
         autoResize();
+
+        // 显示输入中
         setTyping(true);
 
         try {
-            currentEventSource = new EventSource('/chat?message=' + encodeURIComponent(message) + '&id=' + currentSessionId);
+            currentEventSource = new EventSource(`/chat?message=${encodeURIComponent(message)}&id=${currentSessionId}`);
             let assistantMessage = '';
             let messageDiv = null;
 
             currentEventSource.onmessage = (event) => {
                 const line = event.data;
-                
-                // 处理 [DONE] 结束标记
+
+                // 检查结束标记
                 if (line === '[DONE]') {
                     currentEventSource.close();
                     currentEventSource = null;
                     setTyping(false);
+                    // 刷新会话列表
                     loadSessionList();
                     return;
                 }
 
                 try {
                     const data = JSON.parse(line);
-                    
-                    // 处理 Tool 消息
-                    if (data && data.role === 'tool') {
-                        assistantMessage = '';
-                        messageDiv = null;
-                        addToolMessage(data.content);
-                        return;
-                    }
-                    
-                    // 处理助手消息内容
-                    if (data && data.content) {
+                    if (data && data.role === 'assistant' && data.content) {
                         if (!messageDiv) {
                             messageDiv = document.createElement('div');
                             messageDiv.className = 'message assistant-message';
                             chatContainer.appendChild(messageDiv);
                         }
                         assistantMessage += data.content;
-                        messageDiv.innerHTML = escapeHtml(assistantMessage) + '<div class="message-time">' + getCurrentTime() + '</div>';
+                        messageDiv.innerHTML = `
+                            ${escapeHtml(assistantMessage)}
+                            <div class="message-time">${getCurrentTime()}</div>
+                        `;
                         scrollToBottom();
+                    }
+                    if (data && data.role === 'assistant' && data.tool_calls) {
+                        for (let i = 0; i < data.tool_calls.length; i++) {
+                            const arguments = data.tool_calls[i].function.arguments
+                            const command = JSON.parse(arguments).command
+                            addMessage(command.slice(0, 100), false);
+                        }
+                        assistantMessage = '';
+                        messageDiv = null;
                     }
                 } catch (e) {
                     // 忽略非 JSON 行
                 }
             };
 
-            currentEventSource.onerror = () => {
+            currentEventSource.onerror = (error) => {
                 currentEventSource.close();
                 currentEventSource = null;
                 setTyping(false);
                 if (!assistantMessage) {
-                    addMessage('抱歉，我没有收到响应。', 'assistant');
+                    addMessage('抱歉，我没有收到响应。', false);
                 }
             };
         } catch (error) {
             setTyping(false);
-            addMessage('抱歉，发生了错误：' + error.message, 'assistant');
+            addMessage('抱歉，发生了错误：' + error.message, false);
         }
     }
 </script>
