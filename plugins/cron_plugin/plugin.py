@@ -1,4 +1,3 @@
-import json
 import logging
 import uuid
 from datetime import datetime
@@ -29,8 +28,6 @@ class TaskEntity(BaseModel):
 
 
 async def execute_task(task_id: str, name: str, content: str):
-    job = scheduler.get_job(task_id)
-    logging.info(f"Executing task: {json.dumps(job_to_dict(job), ensure_ascii=False)}")
     response = requests.post(f"{CHAT_URL}?id={task_id}&message={content}", stream=True)
     response.raise_for_status()
     for _ in response.iter_lines():

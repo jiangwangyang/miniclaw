@@ -6,7 +6,7 @@ from fastapi import FastAPI, APIRouter, Path
 from fastapi.responses import JSONResponse
 
 SESSIONS_DIR = "sessions"
-router = APIRouter(prefix="")
+router = APIRouter(prefix="/session")
 
 
 # 加载会话消息
@@ -22,7 +22,7 @@ def load_session_messages(session_id: str) -> list:
 
 
 # 获取所有会话列表
-@router.get("/session/list")
+@router.get("/list")
 async def get_sessions():
     sessions = []
     for filename in os.listdir(SESSIONS_DIR):
@@ -46,14 +46,14 @@ async def get_sessions():
     return JSONResponse(content=sessions)
 
 
-@router.get("/session/{id}")
+@router.get("/{id}")
 async def get_session(session_id: str = Path(..., alias="id")):
     messages = load_session_messages(session_id)
     filtered_messages = [msg for msg in messages if msg.get('role') != 'system']
     return JSONResponse(content={"messages": filtered_messages})
 
 
-@router.delete("/session/{id}")
+@router.delete("/{id}")
 async def delete_session(session_id: str = Path(..., alias="id")):
     filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
     if os.path.exists(filepath):
