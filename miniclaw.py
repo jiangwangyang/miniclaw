@@ -19,10 +19,9 @@ logging.basicConfig(
 BASE_URL = "https://api.minimaxi.com/v1"
 API_KEY = os.getenv("MINIMAX_API_KEY")
 MODEL = "MiniMax-M2.7"
-MINICLAW_DIR = os.path.dirname(os.path.abspath(__file__))
-AGENTS_FILE_LIST = ["AGENTS.md", os.path.join(MINICLAW_DIR, "AGENTS.md"), os.path.expanduser("~/.miniclaw/AGENTS.md"), os.path.expanduser("~/.agents/AGENTS.md")]
-SKILLS_DIR_LIST = ["skills/", os.path.join(MINICLAW_DIR, "skills/"), os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
-PLUGINS_DIR_LIST = ["plugins/", os.path.join(MINICLAW_DIR, "plugins/"), os.path.expanduser("~/.miniclaw/plugins/"), os.path.expanduser("~/.agents/plugins/")]
+AGENTS_FILE_LIST = ["AGENTS.md", os.path.expanduser("~/.miniclaw/AGENTS.md"), os.path.expanduser("~/.agents/AGENTS.md")]
+SKILLS_DIR_LIST = ["skills/", os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
+PLUGINS_DIR_LIST = ["plugins/", os.path.expanduser("~/.miniclaw/plugins/"), os.path.expanduser("~/.agents/miniclaw_plugins/")]
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
 agents: str = ""
 skills: list[dict[str, str]] = []
