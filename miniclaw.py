@@ -52,7 +52,7 @@ async def execute_command(command: str) -> str:
 
 
 # 加载AGENTS文件
-def load_agents():
+async def load_agents():
     global agents
     for agents_file in AGENTS_FILE_LIST:
         if os.path.isfile(agents_file):
@@ -63,7 +63,7 @@ def load_agents():
 
 
 # 加载技能
-def load_skills():
+async def load_skills():
     skills.clear()
     loaded_skill_names = set()
     # 遍历技能目录
@@ -90,7 +90,7 @@ def load_skills():
 
 
 # 加载插件
-def load_plugins():
+async def load_plugins():
     plugins.clear()
     loaded_plugin_names = set()
     # 遍历插件目录
@@ -129,6 +129,9 @@ async def execute_plugins(action: str, **kwargs):
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await load_agents()
+    await load_skills()
+    await load_plugins()
     # before application
     await execute_plugins(action="before_application", app=app)
     # 应用运行阶段
@@ -137,9 +140,6 @@ async def lifespan(app: FastAPI):
     await execute_plugins(action="after_application", app=app)
 
 
-load_agents()
-load_skills()
-load_plugins()
 app: FastAPI = FastAPI(lifespan=lifespan)
 
 
@@ -232,9 +232,3 @@ async def interrupt(session_id: str = Query(..., alias="id")):
         session_flag[session_id] = False
         return {"success": True, "message": f"会话 {session_id} 已标记为中断"}
     return {"success": False, "message": f"会话 {session_id} 不存在或已结束"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("miniclaw:app", host="0.0.0.0", port=11223)
