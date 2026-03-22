@@ -20,6 +20,11 @@
             --shadow-soft: 0 2px 8px rgba(54, 69, 79, 0.08);
             --shadow-elevated: 0 4px 20px rgba(54, 69, 79, 0.12);
             --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            
+            /* Tool 消息专用颜色 - 低存在感 */
+            --tool-bg: #f0f2f4;
+            --tool-border: #e2e5e8;
+            --tool-text: #8b95a0;
         }
 
         * {
@@ -282,18 +287,93 @@
             border-radius: 3px;
         }
 
-        /* 消息样式 */
-        .message {
+        /* ========== 消息样式 ========== */
+        
+        /* 用户消息 - 醒目设计 */
+        .user-message {
             max-width: 72%;
+            align-self: flex-end;
             padding: 16px 20px;
-            border-radius: 16px;
+            border-radius: 20px;
+            border-bottom-right-radius: 6px;
+            background: linear-gradient(135deg, var(--charcoal) 0%, #2d3a43 100%);
+            color: white;
+            box-shadow: var(--shadow-elevated), 0 4px 12px rgba(54, 69, 79, 0.2);
             word-wrap: break-word;
             line-height: 1.6;
             font-size: 15px;
-            animation: messageSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            font-weight: 500;
+            animation: userMessageSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
 
-        @keyframes messageSlide {
+        .user-message::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            border-radius: 20px 20px 0 0;
+        }
+
+        @keyframes userMessageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 助手消息 - 醒目设计 */
+        .assistant-message {
+            max-width: 78%;
+            align-self: flex-start;
+            padding: 18px 22px;
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--charcoal);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-soft);
+            word-wrap: break-word;
+            line-height: 1.7;
+            font-size: 15px;
+            animation: assistantMessageSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 助手消息代码块样式 */
+        .assistant-message pre {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .assistant-message code {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            background: rgba(54, 69, 79, 0.06);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .assistant-message pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        @keyframes assistantMessageSlide {
             from {
                 opacity: 0;
                 transform: translateY(12px) scale(0.98);
@@ -304,27 +384,64 @@
             }
         }
 
-        .user-message {
-            align-self: flex-end;
-            background: var(--charcoal);
-            color: white;
-            border-bottom-right-radius: 4px;
-            box-shadow: var(--shadow-elevated);
-        }
-
-        .assistant-message {
+        /* Tool 消息 - 低存在感设计 */
+        .tool-message {
+            max-width: 65%;
             align-self: flex-start;
-            background: var(--bg-primary);
-            color: var(--charcoal);
+            padding: 10px 14px;
+            border-radius: 12px;
             border-bottom-left-radius: 4px;
-            border: 1px solid var(--border-color);
+            background: var(--tool-bg);
+            color: var(--tool-text);
+            border: 1px dashed var(--tool-border);
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 12px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            animation: toolMessageSlide 0.3s ease-out;
+            opacity: 0.7;
+            margin-left: 20px;
+            position: relative;
         }
 
+        .tool-message::before {
+            content: '⚙️';
+            font-size: 10px;
+            margin-right: 6px;
+            opacity: 0.6;
+        }
+
+        @keyframes toolMessageSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+            to {
+                opacity: 0.7;
+                transform: translateX(0);
+            }
+        }
+
+        /* Tool 消息悬停时轻微提亮 */
+        .tool-message:hover {
+            opacity: 0.85;
+            border-color: #cdd2d6;
+        }
+
+        /* 消息时间戳 */
         .message-time {
-            font-size: 11px;
-            opacity: 0.5;
+            font-size: 10px;
+            opacity: 0.4;
             margin-top: 8px;
             font-weight: 500;
+            color: inherit;
+        }
+
+        /* 消息容器间距优化 */
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         /* 空状态 */
@@ -553,8 +670,13 @@
             .sidebar {
                 width: 240px;
             }
-            .message {
+            .user-message,
+            .assistant-message {
                 max-width: 85%;
+            }
+            .tool-message {
+                max-width: 70%;
+                margin-left: 10px;
             }
         }
     </style>
@@ -720,16 +842,16 @@
             if (data.messages && data.messages.length > 0) {
                 data.messages.forEach(msg => {
                     if (msg.role === 'user') {
-                        addMessage(msg.content, true);
+                        addMessage(msg.content, 'user');
                     } else if (msg.role === 'assistant') {
                         if (msg.content) {
-                            addMessage(msg.content, false);
+                            addMessage(msg.content, 'assistant');
                         }
                         if (msg.tool_calls) {
                             for (let i = 0; i < msg.tool_calls.length; i++) {
-                                const arguments = msg.tool_calls[i].function.arguments
-                                const command = JSON.parse(arguments).command
-                                addMessage(command.slice(0, 100), false);
+                                const arguments = msg.tool_calls[i].function.arguments;
+                                const command = JSON.parse(arguments).command;
+                                addMessage(command.slice(0, 100), 'tool');
                             }
                         }
                     }
@@ -754,7 +876,7 @@
             });
         } catch (error) {
             console.error('加载会话失败:', error);
-            addMessage('加载会话失败: ' + error.message, false);
+            addMessage('加载会话失败: ' + error.message, 'assistant');
         }
     }
 
@@ -770,17 +892,53 @@
         return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     }
 
-    function addMessage(content, isUser) {
+    /**
+     * 添加消息到聊天容器
+     * @param {string} content - 消息内容
+     * @param {string} type - 消息类型: 'user' | 'assistant' | 'tool'
+     */
+    function addMessage(content, type) {
+        // 去除前后多余的空白字符
+        content = content.trim();
         // 隐藏空状态
         emptyState.style.display = 'none';
+        
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+        messageDiv.className = `${type}-message`;
+        
+        // 根据类型格式化内容
+        let formattedContent = escapeHtml(content);
+        if (type === 'assistant') {
+            formattedContent = formatMarkdown(content);
+        }
+        
         messageDiv.innerHTML = `
-            ${escapeHtml(content)}
+            ${formattedContent}
             <div class="message-time">${getCurrentTime()}</div>
         `;
         chatContainer.appendChild(messageDiv);
         scrollToBottom();
+    }
+
+    /**
+     * 简单的 Markdown 格式化
+     * @param {string} text - 原始文本
+     * @returns {string} - 格式化后的 HTML
+     */
+    function formatMarkdown(text) {
+        // 转义 HTML 特殊字符（但保留代码块内容）
+        let result = escapeHtml(text);
+        // 代码块
+        result = result.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        // 行内代码
+        result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // 粗体
+        result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // 斜体
+        result = result.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // 换行
+        result = result.replace(/\n/g, '<br>');
+        return result;
     }
 
     function escapeHtml(text) {
@@ -816,7 +974,7 @@
         if (!message || isTyping || !currentSessionId) return;
 
         // 添加用户消息
-        addMessage(message, true);
+        addMessage(message, 'user');
         messageInput.value = '';
         autoResize();
 
@@ -846,21 +1004,21 @@
                     if (data && data.role === 'assistant' && data.content) {
                         if (!messageDiv) {
                             messageDiv = document.createElement('div');
-                            messageDiv.className = 'message assistant-message';
+                            messageDiv.className = 'assistant-message';
                             chatContainer.appendChild(messageDiv);
                         }
                         assistantMessage += data.content;
                         messageDiv.innerHTML = `
-                            ${escapeHtml(assistantMessage)}
+                            ${formatMarkdown(assistantMessage)}
                             <div class="message-time">${getCurrentTime()}</div>
                         `;
                         scrollToBottom();
                     }
                     if (data && data.role === 'assistant' && data.tool_calls) {
                         for (let i = 0; i < data.tool_calls.length; i++) {
-                            const arguments = data.tool_calls[i].function.arguments
-                            const command = JSON.parse(arguments).command
-                            addMessage(command.slice(0, 100), false);
+                            const arguments = data.tool_calls[i].function.arguments;
+                            const command = JSON.parse(arguments).command;
+                            addMessage(command.slice(0, 100), 'tool');
                         }
                         assistantMessage = '';
                         messageDiv = null;
@@ -875,12 +1033,12 @@
                 currentEventSource = null;
                 setTyping(false);
                 if (!assistantMessage) {
-                    addMessage('抱歉，我没有收到响应。', false);
+                    addMessage('抱歉，我没有收到响应。', 'assistant');
                 }
             };
         } catch (error) {
             setTyping(false);
-            addMessage('抱歉，发生了错误：' + error.message, false);
+            addMessage('抱歉，发生了错误：' + error.message, 'assistant');
         }
     }
 </script>
