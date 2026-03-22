@@ -83,7 +83,7 @@ async def load_skills():
                 name = lines[1].strip()[5:].strip()
                 description = lines[2].strip()[12:].strip()
                 if name == entry:
-                    skills.append({"name": name, "description": description, "path": skill_file_path})
+                    skills.append({"name": name, "description": description, "path": os.path.abspath(skill_file_path)})
                     loaded_skill_names.add(name)
     logging.info(f"Loaded skills: {json.dumps(skills, ensure_ascii=False)}")
 
