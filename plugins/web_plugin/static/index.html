@@ -396,7 +396,7 @@
             background: var(--bg-primary);
             display: flex;
             gap: 12px;
-            align-items: center;
+            align-items: flex-end;
             padding: 6px;
             border-radius: 16px;
             border: 2px solid var(--border-color);
@@ -418,6 +418,12 @@
             color: var(--charcoal);
             outline: none;
             line-height: 1.5;
+            resize: none;
+            min-height: 44px;
+            max-height: 160px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
         }
 
         .message-input::placeholder {
@@ -428,6 +434,16 @@
         .message-input:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        /* 自动调整 textarea 高度 */
+        .message-input::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .message-input::-webkit-scrollbar-thumb {
+            background: var(--light-gray);
+            border-radius: 2px;
         }
 
         .btn {
@@ -442,6 +458,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
         }
 
         .send-button {
@@ -577,7 +594,7 @@
             <div class="empty-state-title">开始新对话</div>
             <div class="empty-state-text">点击左侧"新对话"按钮，或选择一个历史会话开始聊天</div>
             <div class="empty-state-hint">
-                💡 输入消息后按 Enter 发送，点击中断按钮可停止生成
+                💡 输入消息后按 Enter 发送（Shift+Enter 换行），点击中断按钮可停止生成
             </div>
         </div>
     </div>
@@ -589,7 +606,7 @@
     <div class="input-wrapper">
         <div class="input-container">
             <label for="messageInput"></label>
-            <input type="text" class="message-input" id="messageInput" placeholder="输入消息..." maxlength="2000" disabled>
+            <textarea class="message-input" id="messageInput" placeholder="输入消息..." maxlength="2000" disabled rows="1"></textarea>
             <button class="interrupt-button btn" id="interruptButton" onclick="interruptSession()" style="display: none;">打断</button>
             <button class="send-button btn" id="sendButton" onclick="sendMessage()" disabled>发送</button>
         </div>
@@ -610,12 +627,21 @@
     let isTyping = false;
     let currentEventSource = null;
 
+    // 自动调整 textarea 高度
+    function autoResize() {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 160) + 'px';
+    }
+
     // 页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
         loadSessionList();
 
-        // 回车发送
-        messageInput.addEventListener('keypress', function(e) {
+        // 监听输入事件，自动调整高度
+        messageInput.addEventListener('input', autoResize);
+
+        // 回车发送，Shift+Enter 换行
+        messageInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
@@ -664,6 +690,10 @@
         chatContainer.appendChild(emptyState);
         emptyState.style.display = 'flex';
 
+        // 清空输入框并重置高度
+        messageInput.value = '';
+        autoResize();
+
         // 启用输入
         enableInput();
         sessionInfo.textContent = '新对话';
@@ -703,6 +733,10 @@
                 chatContainer.appendChild(emptyState);
                 emptyState.style.display = 'flex';
             }
+
+            // 清空输入框并重置高度
+            messageInput.value = '';
+            autoResize();
 
             // 启用输入
             enableInput();
@@ -780,6 +814,7 @@
         // 添加用户消息
         addMessage(message, true);
         messageInput.value = '';
+        autoResize();
 
         // 显示输入中
         setTyping(true);

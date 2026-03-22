@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI, APIRouter
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -13,8 +13,7 @@ router = APIRouter(prefix="")
 @router.get("/index")
 @router.get("/index.html")
 async def index():
-    index_path = STATIC_DIR / "index.html"
-    return FileResponse(index_path, media_type="text/html")
+    return RedirectResponse(url="/static/index.html", status_code=302)
 
 
 async def before_application(app: FastAPI, **kwargs):
