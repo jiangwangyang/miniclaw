@@ -45,9 +45,11 @@ tools = [{
 
 # 执行本地命令
 async def execute_command(command: str) -> str:
+    if os.name == "nt":
+        command = f"chcp 65001 > nul && {command}"
     process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
-    return f"{stdout.decode()}{stderr.decode()}"
+    return f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
 
 
 # 加载AGENTS文件
