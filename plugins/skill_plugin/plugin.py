@@ -7,7 +7,7 @@ skills: list[dict[str, str]] = []
 tool = {
     "type": "function",
     "function": {
-        "name": "activate_skill",
+        "name": "read_skill_md_file",
         "description": "",
         "parameters": {
             "type": "object",
@@ -75,7 +75,7 @@ async def after_model(**kwargs):
 
 
 async def before_tool(messages: list, tool_call: dict, **kwargs):
-    if tool_call["function"]["name"] != "activate_skill":
+    if tool_call["function"]["name"] != "read_skill_md_file":
         return
     try:
         args = json.loads(tool_call["function"]["arguments"])

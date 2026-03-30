@@ -129,8 +129,10 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
             for tool_call in assistant_tool_calls:
                 # before tool
                 await execute_plugins(action="before_tool", session_id=session_id, messages=messages, tool_call=tool_call)
-                if messages[-1]["role"] == "tool" and messages[-1]["tool_call_id"] == tool_call["id"]:
-                    yield f"data: {json.dumps(messages[-1], ensure_ascii=False)}\n\n"
+                # yield tool
+                if messages[-1]["role"] != "tool" or messages[-1]["tool_call_id"] != tool_call["id"]:
+                    messages.append({"role": "tool", "tool_call_id": tool_call["id"], "content": "Can't find tool"})
+                yield f"data: {json.dumps(messages[-1], ensure_ascii=False)}\n\n"
                 # after tool
                 await execute_plugins(action="after_tool", session_id=session_id, messages=messages, tool_call=tool_call)
 
