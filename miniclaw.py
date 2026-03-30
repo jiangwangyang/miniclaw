@@ -18,24 +18,11 @@ logging.basicConfig(
 BASE_URL = "https://api.minimaxi.com/v1"
 API_KEY = os.getenv("MINIMAX_API_KEY")
 MODEL = "MiniMax-M2.7"
-AGENTS_FILE_LIST = ["AGENTS.md", os.path.expanduser("~/.miniclaw/AGENTS.md"), os.path.expanduser("~/.agents/AGENTS.md")]
 PLUGINS_DIR_LIST = ["plugins/", os.path.expanduser("~/.miniclaw/plugins/"), os.path.expanduser("~/.agents/miniclaw_plugins/")]
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
-agents: str = ""
-tools: list[object] = []
 plugins: list[object] = []
+tools: list[object] = []
 session_flag: dict[str, bool] = {}
-
-
-# 加载AGENTS文件
-async def load_agents():
-    global agents
-    for agents_file in AGENTS_FILE_LIST:
-        if os.path.isfile(agents_file):
-            with open(agents_file, "r", encoding="utf-8") as f:
-                agents = f.read()
-            break
-    logging.info(f"Loaded agents: {json.dumps(agents, ensure_ascii=False)}")
 
 
 # 加载插件
@@ -78,7 +65,6 @@ async def execute_plugins(action: str, **kwargs):
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await load_agents()
     await load_plugins()
     # before application
     await execute_plugins(action="before_application", app=app, tools=tools)
@@ -101,10 +87,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
         # session start
         session_flag[session_id] = True
         assistant_content = ""
-        messages = [
-            {"role": "system", "content": agents},
-            {"role": "user", "content": user_content}
-        ]
+        messages = [{"role": "user", "content": user_content}]
         # before_chat
         await execute_plugins(action="before_chat", session_id=session_id, messages=messages, user_content=user_content)
 
