@@ -176,6 +176,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
             assistant_tool_calls = []
             async for chunk in response:
                 if not session_flag.get(session_id, False):
+                    assistant_tool_calls.clear()
                     break
                 chunk = json.loads(json.dumps(chunk, default=lambda o: o.__dict__))
                 delta = chunk["choices"][0]["delta"]
@@ -197,8 +198,6 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
 
             # 3. 处理工具调用
             for tool_call in assistant_tool_calls:
-                if not session_flag.get(session_id, False):
-                    break
                 # before tool
                 await execute_plugins(action="before_tool", session_id=session_id, messages=messages, tool_call=tool_call)
                 try:
