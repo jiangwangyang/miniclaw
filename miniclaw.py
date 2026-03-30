@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import sys
-from asyncio import subprocess
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Query
@@ -24,32 +23,10 @@ SKILLS_DIR_LIST = ["skills/", os.path.expanduser("~/.miniclaw/skills/"), os.path
 PLUGINS_DIR_LIST = ["plugins/", os.path.expanduser("~/.miniclaw/plugins/"), os.path.expanduser("~/.agents/miniclaw_plugins/")]
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
 agents: str = ""
+tools: list[object] = []
 skills: list[dict[str, str]] = []
 plugins: list[object] = []
 session_flag: dict[str, bool] = {}
-tools = [{
-    "type": "function",
-    "function": {
-        "name": "execute_command",
-        "description": "execute shell command",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "command": {"type": "string", "description": "shell command"}
-            },
-            "required": ["command"],
-        },
-    }
-}]
-
-
-# 执行本地命令
-async def execute_command(command: str) -> str:
-    if os.name == "nt":
-        command = f"chcp 65001 > nul && {command}"
-    process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    return f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
 
 
 # 加载AGENTS文件
@@ -134,7 +111,7 @@ async def lifespan(app: FastAPI):
     await load_skills()
     await load_plugins()
     # before application
-    await execute_plugins(action="before_application", app=app)
+    await execute_plugins(action="before_application", app=app, tools=tools)
     # 应用运行阶段
     yield
     # after application
@@ -200,16 +177,10 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
             for tool_call in assistant_tool_calls:
                 # before tool
                 await execute_plugins(action="before_tool", session_id=session_id, messages=messages, tool_call=tool_call)
-                try:
-                    args = json.loads(tool_call["function"]["arguments"])
-                    tool_content = await execute_command(args.get("command", ""))
-                except json.JSONDecodeError:
-                    tool_content = "Error: Invalid JSON arguments."
-                tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
-                yield f"data: {json.dumps(tool_message, ensure_ascii=False)}\n\n"
-                messages.append(tool_message)
+                if messages[-1]["role"] == "tool" and messages[-1]["tool_call_id"] == tool_call["id"]:
+                    yield f"data: {json.dumps(messages[-1], ensure_ascii=False)}\n\n"
                 # after tool
-                await execute_plugins(action="after_tool", session_id=session_id, messages=messages, tool_call=tool_call, tool_content=tool_content)
+                await execute_plugins(action="after_tool", session_id=session_id, messages=messages, tool_call=tool_call)
 
             # 4. 判断结束
             if not assistant_tool_calls:
