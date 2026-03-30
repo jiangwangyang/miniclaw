@@ -8,7 +8,6 @@ import uuid
 
 import lark_oapi as lark
 import requests
-from fastapi import FastAPI
 from lark_oapi.api.im.v1 import *
 
 CHAT_URL = "http://localhost:11223/chat"
@@ -95,7 +94,7 @@ def event_listener():
     ws_client.start()
 
 
-async def before_application(app: FastAPI, **kwargs):
+async def before_application(**kwargs):
     if not LARK_APP_ID or not LARK_APP_SECRET:
         return
     # 启动 消费者线程 消息监听线程
@@ -108,29 +107,29 @@ async def before_application(app: FastAPI, **kwargs):
     logging.info("Feishu plugin started")
 
 
-async def after_application(app: FastAPI, **kwargs):
+async def after_application(**kwargs):
     logging.info("Feishu plugin stopped")
 
 
-async def before_chat(session_id: str, messages: list, user_content: str, **kwargs):
+async def before_chat(**kwargs):
     pass
 
 
-async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
+async def after_chat(**kwargs):
     pass
 
 
-async def before_model(session_id: str, messages: list, **kwargs):
+async def before_model(**kwargs):
     pass
 
 
-async def after_model(session_id: str, messages: list, **kwargs):
+async def after_model(**kwargs):
     pass
 
 
-async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs):
+async def before_tool(**kwargs):
     pass
 
 
-async def after_tool(session_id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
+async def after_tool(**kwargs):
     pass

@@ -68,7 +68,7 @@ async def before_application(app: FastAPI, **kwargs):
     logging.info("Session plugin started")
 
 
-async def after_application(app: FastAPI, **kwargs):
+async def after_application(**kwargs):
     logging.info("Session plugin stopped")
 
 
@@ -81,23 +81,23 @@ async def before_chat(session_id: str, messages: list, user_content: str, **kwar
         return
 
 
-async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
+async def after_chat(session_id: str, messages: list, **kwargs):
     session_file = os.path.join(SESSIONS_DIR, f"{session_id}.json")
     with open(session_file, "w", encoding="utf-8") as f:
         json.dump(messages, f, ensure_ascii=False)
 
 
-async def before_model(session_id: str, messages: list, **kwargs):
+async def before_model(**kwargs):
     pass
 
 
-async def after_model(session_id: str, messages: list, **kwargs):
+async def after_model(**kwargs):
     pass
 
 
-async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs):
+async def before_tool(**kwargs):
     pass
 
 
-async def after_tool(session_id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
+async def after_tool(**kwargs):
     pass

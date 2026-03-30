@@ -22,29 +22,29 @@ async def before_application(app: FastAPI, **kwargs):
     logging.info("Web plugin started")
 
 
-async def after_application(app: FastAPI, **kwargs):
+async def after_application(**kwargs):
     logging.info("Web plugin stopped")
 
 
-async def before_chat(session_id: str, messages: list, user_content: str, **kwargs):
+async def before_chat(**kwargs):
     pass
 
 
-async def after_chat(session_id: str, messages: list, user_content: str, assistant_content: str, **kwargs):
+async def after_chat(**kwargs):
     pass
 
 
-async def before_model(session_id: str, messages: list, **kwargs):
+async def before_model(**kwargs):
     pass
 
 
-async def after_model(session_id: str, messages: list, **kwargs):
+async def after_model(**kwargs):
     pass
 
 
-async def before_tool(session_id: str, messages: list, tool_call: dict, **kwargs):
+async def before_tool(**kwargs):
     pass
 
 
-async def after_tool(session_id: str, messages: list, tool_call: dict, tool_content: str, **kwargs):
+async def after_tool(**kwargs):
     pass
