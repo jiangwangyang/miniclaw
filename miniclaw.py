@@ -19,12 +19,10 @@ BASE_URL = "https://api.minimaxi.com/v1"
 API_KEY = os.getenv("MINIMAX_API_KEY")
 MODEL = "MiniMax-M2.7"
 AGENTS_FILE_LIST = ["AGENTS.md", os.path.expanduser("~/.miniclaw/AGENTS.md"), os.path.expanduser("~/.agents/AGENTS.md")]
-SKILLS_DIR_LIST = ["skills/", os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
 PLUGINS_DIR_LIST = ["plugins/", os.path.expanduser("~/.miniclaw/plugins/"), os.path.expanduser("~/.agents/miniclaw_plugins/")]
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
 agents: str = ""
 tools: list[object] = []
-skills: list[dict[str, str]] = []
 plugins: list[object] = []
 session_flag: dict[str, bool] = {}
 
@@ -38,33 +36,6 @@ async def load_agents():
                 agents = f.read()
             break
     logging.info(f"Loaded agents: {json.dumps(agents, ensure_ascii=False)}")
-
-
-# 加载技能
-async def load_skills():
-    skills.clear()
-    loaded_skill_names = set()
-    # 遍历技能目录
-    for skills_dir in SKILLS_DIR_LIST:
-        if not os.path.exists(skills_dir):
-            continue
-        # 遍历技能
-        for entry in os.listdir(skills_dir):
-            if entry in loaded_skill_names:
-                continue
-            skill_file_path = os.path.join(skills_dir, entry, "SKILL.md")
-            if not os.path.isfile(skill_file_path):
-                continue
-            # 尝试读取 SKILL.md 提取 name 和 description
-            with open(skill_file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            if len(lines) >= 4 and lines[0].strip() == "---" and lines[1].strip().startswith("name:") and lines[2].strip().startswith("description:"):
-                name = lines[1].strip()[5:].strip()
-                description = lines[2].strip()[12:].strip()
-                if name == entry:
-                    skills.append({"name": name, "description": description, "path": os.path.abspath(skill_file_path)})
-                    loaded_skill_names.add(name)
-    logging.info(f"Loaded skills: {json.dumps(skills, ensure_ascii=False)}")
 
 
 # 加载插件
@@ -108,7 +79,6 @@ async def execute_plugins(action: str, **kwargs):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await load_agents()
-    await load_skills()
     await load_plugins()
     # before application
     await execute_plugins(action="before_application", app=app, tools=tools)
@@ -131,9 +101,8 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
         # session start
         session_flag[session_id] = True
         assistant_content = ""
-        system_content = f"# Available Skills\n{json.dumps(skills, ensure_ascii=False)}\n\n{agents}"
         messages = [
-            {"role": "system", "content": system_content},
+            {"role": "system", "content": agents},
             {"role": "user", "content": user_content}
         ]
         # before_chat
