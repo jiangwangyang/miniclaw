@@ -15,14 +15,26 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-BASE_URL = "https://api.minimaxi.com/v1"
-API_KEY = os.getenv("MINIMAX_API_KEY")
-MODEL = "MiniMax-M2.7"
+SETTINGS_FILE = "settings.json"
 PLUGINS_DIR_LIST = ["plugins/", "external_plugins/", os.path.expanduser("~/.miniclaw/plugins/")]
-client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
+client: AsyncOpenAI
+session_flag: dict[str, bool] = {}
+settings: dict[str, object] = {}
 plugins: list[object] = []
 tools: list[object] = []
-session_flag: dict[str, bool] = {}
+
+
+# 加载设置
+async def load_settings():
+    global settings
+    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+        settings = json.load(f)
+    if not settings.get("base_url"):
+        raise ValueError("base_url is required")
+    if not settings.get("api_key_env"):
+        raise ValueError("api_key_env is required")
+    if not settings.get("model"):
+        raise ValueError("model is required")
 
 
 # 加载插件
@@ -65,8 +77,11 @@ async def execute_plugins(action: str, **kwargs):
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # load plugins
+    # init
+    await load_settings()
     await load_plugins()
+    global client
+    client = AsyncOpenAI(base_url=settings["base_url"], api_key=os.getenv(settings["api_key_env"]))
     # before application
     await execute_plugins(action="before_application", app=app, tools=tools)
     # 应用运行阶段
@@ -100,7 +115,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
                 break
 
             # 1. 发送请求
-            response = await client.chat.completions.create(model=MODEL, messages=messages, tools=tools, stream=True)
+            response = await client.chat.completions.create(model=settings["model"], messages=messages, tools=tools, stream=True)
 
             # 2. 收集内容
             # before model
