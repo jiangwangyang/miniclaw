@@ -15,8 +15,9 @@ async def after_application(**kwargs):
     logging.info("Memory plugin stopped")
 
 
-async def before_chat(**kwargs):
-    pass
+async def before_chat(messages: list, **kwargs):
+    if messages[0]["role"] == "system":
+        messages[0]["content"] += f"---\nHistory memory: {os.path.abspath(MEMORY_FILE)}\n---\n\n"
 
 
 async def after_chat(user_content: str, assistant_content: str, **kwargs):
