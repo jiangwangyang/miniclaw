@@ -12,8 +12,8 @@ from lark_oapi.api.im.v1 import *
 
 CHAT_URL = "http://localhost:11223/chat"
 INTERRUPT_URL = "http://localhost:11223/interrupt"
-LARK_APP_ID = os.getenv("LARK_APP_ID")
-LARK_APP_SECRET = os.getenv("LARK_APP_SECRET")
+LARK_APP_ID = os.getenv("LARK_APP_ID") or ""
+LARK_APP_SECRET = os.getenv("LARK_APP_SECRET") or ""
 message_queue = queue.Queue(maxsize=10)
 
 
@@ -40,7 +40,7 @@ def message_consumer():
             .build()
         response: CreateMessageResponse = client.im.v1.message.create(request)
         if not response.success():
-            lark.logger.error(f"client.im.v1.message.create failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}, resp: \n{json.dumps(json.loads(response.raw.content), ensure_ascii=False)}")
+            logging.error(f"client.im.v1.message.create failed, code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}, resp: \n{json.dumps(json.loads(response.raw.content or ""), ensure_ascii=False)}")
 
     # 死循环消费队列飞书消息
     while True:
@@ -78,7 +78,7 @@ def message_consumer():
 # 飞书消息监听器 将飞书消息放入队列 确保按序处理
 def event_listener():
     def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
-        lark.logger.info(lark.JSON.marshal(data))
+        logging.info(lark.JSON.marshal(data))
         open_id = data.event.sender.sender_id.open_id
         response = requests.post(f"{INTERRUPT_URL}?id={open_id}")
         response.raise_for_status()
@@ -104,11 +104,11 @@ async def before_application(**kwargs):
     event_listener_thread.daemon = True
     message_consumer_thread.start()
     event_listener_thread.start()
-    logging.info("Feishu plugin started")
+    logging.info("Lark channel plugin started")
 
 
 async def after_application(**kwargs):
-    logging.info("Feishu plugin stopped")
+    logging.info("Lark channel plugin stopped")
 
 
 async def before_chat(**kwargs):
