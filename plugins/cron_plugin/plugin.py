@@ -1,16 +1,19 @@
 import logging
+import pathlib
 import uuid
 from datetime import datetime
 
-import requests
+import httpx
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 CHAT_URL = "http://localhost:11223/chat"
+TASKS_HTML_FILE = pathlib.Path(__file__).parent / "static" / "task.html"
 scheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///data/tasks.db")})
+async_client = httpx.AsyncClient()
 router = APIRouter(prefix="/task")
 
 
@@ -28,9 +31,9 @@ class TaskEntity(BaseModel):
 
 
 async def execute_task(task_id: str, name: str, content: str):
-    response = requests.post(f"{CHAT_URL}?id={task_id}&message={content}", stream=True)
+    response = await async_client.post(f"{CHAT_URL}?id={task_id}&message={content}")
     response.raise_for_status()
-    for _ in response.iter_lines():
+    async for _ in response.aiter_lines():
         pass
 
 
@@ -38,7 +41,7 @@ def job_to_dict(job) -> dict:
     return {
         "id": job.id,
         "name": job.name,
-        "content": job.args[2],
+        "content": job.args[2] if len(job.args) > 2 else "",
         "year": str(job.trigger.fields[0]),
         "month": str(job.trigger.fields[1]),
         "day": str(job.trigger.fields[2]),
@@ -50,6 +53,11 @@ def job_to_dict(job) -> dict:
         "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
         "enabled": job.next_run_time is not None
     }
+
+
+@router.get("/task.html")
+async def tasks_html():
+    return FileResponse(TASKS_HTML_FILE)
 
 
 @router.get("/list")
@@ -81,7 +89,7 @@ async def delete_task_by_id(task_id: str):
 
 
 @router.post("/{task_id}/enable")
-async def run_task_by_id(task_id: str):
+async def enable_task_by_id(task_id: str):
     job = scheduler.get_job(task_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
@@ -90,7 +98,7 @@ async def run_task_by_id(task_id: str):
 
 
 @router.post("/{task_id}/disable")
-async def run_task_by_id(task_id: str):
+async def disable_task_by_id(task_id: str):
     job = scheduler.get_job(task_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
@@ -99,7 +107,7 @@ async def run_task_by_id(task_id: str):
 
 
 @router.post("/{task_id}/run")
-async def run_task_by_id(task_id: str):
+async def run_task_now(task_id: str):
     job = scheduler.get_job(task_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
