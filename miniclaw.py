@@ -18,7 +18,7 @@ logging.basicConfig(
 BASE_URL = "https://api.minimaxi.com/v1"
 API_KEY = os.getenv("MINIMAX_API_KEY")
 MODEL = "MiniMax-M2.7"
-PLUGINS_DIR_LIST = ["plugins/", os.path.expanduser("~/.miniclaw/plugins/"), os.path.expanduser("~/.agents/miniclaw_plugins/")]
+PLUGINS_DIR_LIST = ["plugins/", "external_plugins/", os.path.expanduser("~/.miniclaw/plugins/")]
 client: AsyncOpenAI = AsyncOpenAI(base_url=BASE_URL, api_key=API_KEY)
 plugins: list[object] = []
 tools: list[object] = []
@@ -65,6 +65,7 @@ async def execute_plugins(action: str, **kwargs):
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # load plugins
     await load_plugins()
     # before application
     await execute_plugins(action="before_application", app=app, tools=tools)
@@ -87,7 +88,10 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
         # session start
         session_flag[session_id] = True
         assistant_content = ""
-        messages = [{"role": "user", "content": user_content}]
+        messages = [
+            {"role": "system", "content": ""},
+            {"role": "user", "content": user_content}
+        ]
         # before_chat
         await execute_plugins(action="before_chat", session_id=session_id, messages=messages, user_content=user_content)
 
@@ -95,7 +99,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
             if not session_flag.get(session_id, False):
                 break
 
-            # 1. 模型生成
+            # 1. 发送请求
             response = await client.chat.completions.create(model=MODEL, messages=messages, tools=tools, stream=True)
 
             # 2. 收集内容
@@ -125,7 +129,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
             # after model
             await execute_plugins(action="after_model", session_id=session_id, messages=messages)
 
-            # 3. 处理工具调用
+            # 3. 工具调用
             for tool_call in assistant_tool_calls:
                 # before tool
                 await execute_plugins(action="before_tool", session_id=session_id, messages=messages, tool_call=tool_call)

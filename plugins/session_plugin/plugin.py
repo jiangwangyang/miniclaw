@@ -75,16 +75,12 @@ async def after_application(**kwargs):
 async def before_chat(session_id: str, messages: list, user_content: str, **kwargs):
     loaded_messages = load_session_messages(session_id)
     if loaded_messages:
-        messages.clear()
-        messages.extend(loaded_messages)
-        messages.append({"role": "user", "content": user_content})
-        return
+        messages[:] = [messages[0]] + [msg for msg in loaded_messages if msg["role"] != "system"] + [{"role": "user", "content": user_content}]
 
 
 async def after_chat(session_id: str, messages: list, **kwargs):
-    session_file = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-    with open(session_file, "w", encoding="utf-8") as f:
-        json.dump(messages, f, ensure_ascii=False)
+    with open(os.path.join(SESSIONS_DIR, f"{session_id}.json"), "w", encoding="utf-8") as f:
+        json.dump([msg for msg in messages if msg["role"] != "system"], f, ensure_ascii=False)
 
 
 async def before_model(**kwargs):

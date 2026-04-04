@@ -26,8 +26,8 @@ async def after_application(**kwargs):
 
 
 async def before_chat(messages: list, **kwargs):
-    if messages[0]["role"] != "system":
-        messages.insert(0, {"role": "system", "content": agents})
+    if messages[0]["role"] == "system":
+        messages[0]["content"] += f"{agents}\n\n"
 
 
 async def after_chat(**kwargs):

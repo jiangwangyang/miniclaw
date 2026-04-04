@@ -2,22 +2,8 @@ import json
 import logging
 import os
 
-SKILLS_DIR_LIST = ["skills/", os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
+SKILLS_DIR_LIST = ["skills/", "external_skills/", os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
 skills: list[dict[str, str]] = []
-tool = {
-    "type": "function",
-    "function": {
-        "name": "read_skill_md_file",
-        "description": "",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string", "description": "skill name"}
-            },
-            "required": ["name"],
-        },
-    }
-}
 
 
 async def load_skills():
@@ -43,14 +29,11 @@ async def load_skills():
                 if name == entry:
                     skills.append({"name": name, "description": description, "path": os.path.abspath(skill_file_path)})
                     loaded_skill_names.add(name)
-    # 将技能列表更新到工具描述中
-    tool["function"]["description"] = f"Available Skills: {json.dumps(skills, ensure_ascii=False)}"
     logging.info(f"Loaded skills: {json.dumps(skills, ensure_ascii=False)}")
 
 
 async def before_application(tools: list, **kwargs):
     await load_skills()
-    tools.append(tool)
     logging.info("Skill plugin started")
 
 
@@ -58,8 +41,9 @@ async def after_application(**kwargs):
     logging.info("Skill plugin stopped")
 
 
-async def before_chat(**kwargs):
-    pass
+async def before_chat(messages: list, **kwargs):
+    if messages[0]["role"] == "system":
+        messages[0]["content"] += f"---\nAvailable Skills: {json.dumps(skills, ensure_ascii=False)}\n---\n\n"
 
 
 async def after_chat(**kwargs):
@@ -75,21 +59,7 @@ async def after_model(**kwargs):
 
 
 async def before_tool(messages: list, tool_call: dict, **kwargs):
-    if tool_call["function"]["name"] != "read_skill_md_file":
-        return
-    try:
-        args = json.loads(tool_call["function"]["arguments"])
-        tool_content = "Can't find skill"
-        skill_name = args.get("name", "")
-        for skill in skills:
-            if skill["name"] == skill_name:
-                with open(skill["path"], "r", encoding="utf-8") as f:
-                    tool_content = f.read()
-                break
-    except json.JSONDecodeError:
-        tool_content = "Error: Invalid JSON arguments."
-    tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
-    messages.append(tool_message)
+    pass
 
 
 async def after_tool(**kwargs):
