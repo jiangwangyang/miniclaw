@@ -1,11 +1,14 @@
 import json
 import logging
 import os
+import pathlib
 
 from fastapi import FastAPI, APIRouter, Path
+from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 
 SESSIONS_DIR = "data/sessions"
+CHAT_HTML_FILE = pathlib.Path(__file__).parent / "static" / "chat.html"
 router = APIRouter(prefix="/session")
 
 
@@ -19,6 +22,11 @@ def load_session_messages(session_id: str) -> list:
             except json.JSONDecodeError:
                 return []
     return []
+
+
+@router.get("/chat.html")
+async def chat_html():
+    return FileResponse(CHAT_HTML_FILE)
 
 
 # 获取所有会话列表
