@@ -81,7 +81,19 @@ async def after_application(**kwargs):
 async def before_chat(session_id: str, messages: list, user_content: str, **kwargs):
     loaded_messages = load_session_messages(session_id)
     if loaded_messages:
-        messages[:] = [messages[0]] + [msg for msg in loaded_messages if msg["role"] != "system"] + [{"role": "user", "content": user_content}]
+        # 过滤消息 每个user消息后只跟一个assistant消息
+        filtered_messages, assistant_msg = [], None
+        for msg in loaded_messages:
+            if msg["role"] == "user":
+                if assistant_msg:
+                    filtered_messages.append(assistant_msg)
+                filtered_messages.append(msg)
+            elif msg["role"] == "assistant":
+                assistant_msg = msg
+        if assistant_msg:
+            filtered_messages.append(assistant_msg)
+        # 拼接开头系统消息和当前用户消息
+        messages[:] = [messages[0]] + filtered_messages + [{"role": "user", "content": user_content}]
 
 
 async def after_chat(session_id: str, messages: list, **kwargs):
