@@ -62,8 +62,6 @@ async def delete_session(session_id: str = Path(..., alias="id")):
 
 
 async def before_application(app: FastAPI, **kwargs):
-    if not os.path.exists(SESSIONS_DIR):
-        os.makedirs(SESSIONS_DIR)
     app.include_router(router)
     logging.info("Session plugin started")
 
@@ -79,6 +77,8 @@ async def before_chat(session_id: str, messages: list, user_content: str, **kwar
 
 
 async def after_chat(session_id: str, messages: list, **kwargs):
+    if not os.path.exists(SESSIONS_DIR):
+        os.makedirs(SESSIONS_DIR)
     with open(os.path.join(SESSIONS_DIR, f"{session_id}.json"), "w", encoding="utf-8") as f:
         json.dump([msg for msg in messages if msg["role"] != "system"], f, ensure_ascii=False)
 
