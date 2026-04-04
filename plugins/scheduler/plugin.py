@@ -1,4 +1,5 @@
 import logging
+import os
 import pathlib
 import uuid
 from datetime import datetime
@@ -11,10 +12,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 CHAT_URL = "http://localhost:11223/chat"
+DATA_DIR = "data"
+TASKS_DB_FILE = "data/tasks.db"
 TASKS_HTML_FILE = pathlib.Path(__file__).parent / "static" / "task.html"
-scheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///data/tasks.db")})
-async_client = httpx.AsyncClient()
-router = APIRouter(prefix="/task")
+scheduler: AsyncIOScheduler
+async_client: httpx.AsyncClient
+router: APIRouter = APIRouter(prefix="/task")
 
 
 class TaskEntity(BaseModel):
@@ -116,16 +119,22 @@ async def run_task_now(task_id: str):
 
 
 async def before_application(app: FastAPI, **kwargs):
-    app.include_router(router)
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
+    global scheduler
+    global async_client
+    scheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///{TASKS_DB_FILE}")})
+    async_client = httpx.AsyncClient()
     if not scheduler.running:
         scheduler.start()
-    logging.info("Cron plugin started, scheduler running")
+    app.include_router(router)
+    logging.info("Scheduler plugin started, scheduler running")
 
 
 async def after_application(**kwargs):
     if scheduler.running:
         scheduler.shutdown()
-    logging.info("Cron plugin stopped")
+    logging.info("Scheduler plugin stopped")
 
 
 async def before_chat(**kwargs):
