@@ -1,3 +1,4 @@
+import json
 import logging
 
 
@@ -10,11 +11,11 @@ async def after_application(**kwargs):
 
 
 async def before_chat(user_content: str, **kwargs):
-    logging.info(f"User: {user_content}")
+    logging.info(f"User: {json.dumps(user_content, ensure_ascii=False)}")
 
 
 async def after_chat(assistant_content: str, **kwargs):
-    logging.info(f"Assistant: {assistant_content}")
+    logging.info(f"Assistant: {json.dumps(assistant_content, ensure_ascii=False)}")
 
 
 async def before_model(**kwargs):
@@ -22,7 +23,7 @@ async def before_model(**kwargs):
 
 
 async def after_model(messages: list, **kwargs):
-    logging.info(f"Model: {messages[-1]}")
+    logging.info(f"Model: {json.dumps(messages[-1], ensure_ascii=False)}")
 
 
 async def before_tool(**kwargs):
@@ -30,4 +31,4 @@ async def before_tool(**kwargs):
 
 
 async def after_tool(messages: list, **kwargs):
-    logging.info(f"Tool: {messages[-1]}")
+    logging.info(f"Tool: {json.dumps(messages[-1], ensure_ascii=False)}")
