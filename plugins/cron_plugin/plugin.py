@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 CHAT_URL = "http://localhost:11223/chat"
-scheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///tasks.db")})
+scheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///data/tasks.db")})
 router = APIRouter(prefix="/task")
 
 

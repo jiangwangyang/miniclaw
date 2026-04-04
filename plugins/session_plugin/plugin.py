@@ -5,7 +5,7 @@ import os
 from fastapi import FastAPI, APIRouter, Path
 from fastapi.responses import JSONResponse
 
-SESSIONS_DIR = "sessions"
+SESSIONS_DIR = "data/sessions"
 router = APIRouter(prefix="/session")
 
 
