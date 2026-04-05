@@ -31,8 +31,8 @@ async def load_settings():
         settings = json.load(f)
     if not settings.get("base_url"):
         raise ValueError("base_url is required")
-    if not settings.get("api_key_env"):
-        raise ValueError("api_key_env is required")
+    if not settings.get("api_key"):
+        raise ValueError("api_key is required")
     if not settings.get("model"):
         raise ValueError("model is required")
 
@@ -77,11 +77,11 @@ async def execute_plugins(action: str, **kwargs):
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global client
     # init
     await load_settings()
     await load_plugins()
-    global client
-    client = AsyncOpenAI(base_url=settings["base_url"], api_key=os.getenv(settings["api_key_env"]))
+    client = AsyncOpenAI(base_url=settings["base_url"], api_key=settings["api_key"])
     # before application
     await execute_plugins(action="before_application", app=app, tools=tools)
     # 应用运行阶段

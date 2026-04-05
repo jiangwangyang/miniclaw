@@ -119,10 +119,9 @@ async def run_task_now(task_id: str):
 
 
 async def before_application(app: FastAPI, **kwargs):
+    global scheduler, async_client
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
-    global scheduler
-    global async_client
     scheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///{TASKS_DB_FILE}")})
     async_client = httpx.AsyncClient()
     if not scheduler.running:

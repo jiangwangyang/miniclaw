@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import os
 import queue
 import threading
 import uuid
@@ -10,19 +9,20 @@ import lark_oapi as lark
 import requests
 from lark_oapi.api.im.v1 import *
 
+SETTINGS_FILE = "settings.json"
 CHAT_URL = "http://localhost:11223/chat"
 INTERRUPT_URL = "http://localhost:11223/interrupt"
-LARK_APP_ID = os.getenv("LARK_APP_ID") or ""
-LARK_APP_SECRET = os.getenv("LARK_APP_SECRET") or ""
 message_queue = queue.Queue(maxsize=10)
+lark_app_id = ""
+lark_app_secret = ""
 
 
 # 用户消息消费者 按序消费飞书消息 将用户消息发送到模型并回复
 def message_consumer():
     # 初始化飞书客户端
     client = lark.Client.builder() \
-        .app_id(LARK_APP_ID) \
-        .app_secret(LARK_APP_SECRET) \
+        .app_id(lark_app_id) \
+        .app_secret(lark_app_secret) \
         .log_level(lark.LogLevel.INFO) \
         .build()
 
@@ -90,12 +90,17 @@ def event_listener():
     # 启动新的事件循环创建监听客户端(因为miniclaw已经占用了事件循环，所以需要创建一个新的)
     lark.ws.client.loop = asyncio.new_event_loop()
     asyncio.set_event_loop(lark.ws.client.loop)
-    ws_client = lark.ws.Client(LARK_APP_ID, LARK_APP_SECRET, event_handler=event_handler, log_level=lark.LogLevel.INFO)
+    ws_client = lark.ws.Client(lark_app_id, lark_app_secret, event_handler=event_handler, log_level=lark.LogLevel.INFO)
     ws_client.start()
 
 
 async def before_application(**kwargs):
-    if not LARK_APP_ID or not LARK_APP_SECRET:
+    global lark_app_id, lark_app_secret
+    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+        settings = json.load(f)
+    lark_app_id = settings.get("lark_app_id", "")
+    lark_app_secret = settings.get("lark_app_secret", "")
+    if not lark_app_id or not lark_app_secret:
         return
     # 启动 消费者线程 消息监听线程
     message_consumer_thread = threading.Thread(target=message_consumer, args=())
