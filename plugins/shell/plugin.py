@@ -1,13 +1,16 @@
 import json
 import logging
+import os
+import pathlib
 import sys
 from asyncio import subprocess
 
+WORK_DIR = pathlib.Path.home() / "miniclaw"
 tool = {
     "type": "function",
     "function": {
         "name": "shell",
-        "description": f"Execute shell command. The current system is {sys.platform}.",
+        "description": f"Execute shell command. System platform: {sys.platform}. Current working directory: {WORK_DIR}",
         "parameters": {
             "type": "object",
             "properties": {
@@ -20,9 +23,11 @@ tool = {
 
 
 async def shell(command: str) -> str:
+    if not os.path.exists(WORK_DIR):
+        os.makedirs(WORK_DIR)
     if sys.platform.startswith("win"):
         command = f"chcp 65001 > nul && {command}"
-    process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=WORK_DIR)
     stdout, stderr = await process.communicate()
     return f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
 
