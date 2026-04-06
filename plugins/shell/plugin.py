@@ -1,13 +1,13 @@
 import json
 import logging
-import os
+import sys
 from asyncio import subprocess
 
 tool = {
     "type": "function",
     "function": {
         "name": "shell",
-        "description": "execute shell command",
+        "description": f"Execute shell command. The current system is {sys.platform}.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -20,7 +20,7 @@ tool = {
 
 
 async def shell(command: str) -> str:
-    if os.name == "nt":
+    if sys.platform.startswith("win"):
         command = f"chcp 65001 > nul && {command}"
     process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = await process.communicate()
