@@ -6,7 +6,7 @@ import sys
 from asyncio import subprocess
 
 WORK_DIR = pathlib.Path.home() / "miniclaw"
-tool = {
+SHELL_TOOL = {
     "type": "function",
     "function": {
         "name": "shell",
@@ -25,15 +25,14 @@ tool = {
 async def shell(command: str) -> str:
     if not os.path.exists(WORK_DIR):
         os.makedirs(WORK_DIR)
-    if sys.platform.startswith("win"):
-        command = f"chcp 65001 > nul && {command}"
     process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=WORK_DIR)
     stdout, stderr = await process.communicate()
     return f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
 
 
 async def before_application(tools: list, **kwargs):
-    tools.append(tool)
+    tools.append(SHELL_TOOL)
+    logging.info(f"Adding shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
     logging.info("Shell plugin started")
 
 
