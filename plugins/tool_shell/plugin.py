@@ -62,8 +62,8 @@ async def before_tool(messages: list, tool_call: dict, **kwargs):
     try:
         args = json.loads(tool_call["function"]["arguments"])
         tool_content = await shell(args.get("command", ""))
-    except json.JSONDecodeError:
-        tool_content = "Error: Invalid JSON arguments."
+    except Exception as e:
+        tool_content = f"Error: {e}"
     tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
     messages.append(tool_message)
 
