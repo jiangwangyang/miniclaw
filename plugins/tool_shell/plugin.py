@@ -1,7 +1,9 @@
+import asyncio
 import json
 import logging
 import os
 import pathlib
+import platform
 import sys
 from asyncio import subprocess
 
@@ -10,14 +12,17 @@ SHELL_TOOL = {
     "type": "function",
     "function": {
         "name": "shell",
-        "description": f"Execute shell command. System platform: {sys.platform}. Current working directory: {WORK_DIR}",
+        "description": f"Execute shell command. System platform: {platform.system()}-{platform.release()}-{platform.machine()}.",
         "parameters": {
             "type": "object",
             "properties": {
-                "command": {"type": "string", "description": "shell command"}
+                "command": {
+                    "type": "string",
+                    "description": "shell command"
+                }
             },
-            "required": ["command"],
-        },
+            "required": ["command"]
+        }
     }
 }
 
@@ -25,19 +30,19 @@ SHELL_TOOL = {
 async def shell(command: str) -> str:
     if not os.path.exists(WORK_DIR):
         os.makedirs(WORK_DIR)
-    process = await subprocess.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=WORK_DIR)
+    process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=WORK_DIR)
     stdout, stderr = await process.communicate()
     return f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
 
 
 async def before_application(tools: list, **kwargs):
-    tools.append(SHELL_TOOL)
-    logging.info(f"Adding shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
-    logging.info("Shell plugin started")
+    if not sys.platform.startswith("win"):
+        tools.append(SHELL_TOOL)
+        logging.info(f"Adding shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
 
 
 async def after_application(**kwargs):
-    logging.info("Shell plugin stopped")
+    pass
 
 
 async def before_chat(**kwargs):
