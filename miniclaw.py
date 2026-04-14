@@ -60,7 +60,7 @@ async def load_plugins():
                     loaded_plugin_names.add(entry)
                 except Exception as e:
                     logging.error(f"加载插件 {entry} 失败: {e}")
-    logging.info(f"Loaded plugins: {plugins}")
+    logging.info(f"Loaded {len(plugins)} plugins: {plugins}")
 
 
 # 执行插件钩子函数
@@ -132,6 +132,7 @@ async def chat(session_id: str = Query(..., alias="id"), user_content: str = Que
                 yield f"data: {json.dumps({"role": "assistant", "content": delta["content"]}, ensure_ascii=False)}\n\n"
                 # 收集工具调用
                 for tool_call in delta["tool_calls"] or []:
+                    tool_call["function"]["arguments"] = tool_call["function"]["arguments"] or ""
                     if tool_call["index"] < len(assistant_tool_calls):
                         assistant_tool_calls[tool_call["index"]]["function"]["arguments"] += tool_call["function"]["arguments"]
                     else:

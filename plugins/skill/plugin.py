@@ -29,7 +29,7 @@ async def load_skills():
                 if name == entry:
                     skills.append({"name": name, "description": description, "path": os.path.abspath(skill_file_path)})
                     loaded_skill_names.add(name)
-    logging.info(f"Loaded skills: {json.dumps(skills, ensure_ascii=False)}")
+    logging.info(f"Loaded {len(skills)} skills: {json.dumps(skills, ensure_ascii=False)}")
 
 
 async def before_application(tools: list, **kwargs):

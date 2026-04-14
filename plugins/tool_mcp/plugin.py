@@ -9,7 +9,7 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
 SETTINGS_FILE = "settings.json"
-manager: MCPManager = None
+manager = None
 
 
 # 管理单个MCP客户端连接
@@ -102,8 +102,7 @@ async def before_application(tools: list, **kwargs):
     await asyncio.gather(*coroutines, return_exceptions=True)
     mcp_openai_tools = manager.get_openai_tools()
     tools.extend(mcp_openai_tools)
-    logging.info(f"Adding MCP tools: {json.dumps(mcp_openai_tools)}")
-    logging.info("MCP plugin started")
+    logging.info(f"MCP plugin started, adding {len(mcp_openai_tools)} MCP tools: {json.dumps(mcp_openai_tools)}")
 
 
 # 关闭MCP客户端

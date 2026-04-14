@@ -18,11 +18,11 @@ async def load_agents():
 
 async def before_application(**kwargs):
     await load_agents()
-    logging.info("System prompt plugin started")
+    logging.info("Agents plugin started")
 
 
 async def after_application(**kwargs):
-    logging.info("System prompt plugin stopped")
+    logging.info("Agents plugin stopped")
 
 
 async def before_chat(messages: list, **kwargs):
