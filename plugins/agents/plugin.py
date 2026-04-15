@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 
 AGENTS_FILE_LIST = ["AGENTS.md", os.path.expanduser("~/.miniclaw/AGENTS.md"), os.path.expanduser("~/.agents/AGENTS.md")]
 agents: str = ""
@@ -16,35 +17,14 @@ async def load_agents():
     logging.info(f"Loaded agents: {json.dumps(agents, ensure_ascii=False)}")
 
 
-async def before_application(**kwargs):
+@asynccontextmanager
+async def lifespan(**kwargs):
     await load_agents()
     logging.info("Agents plugin started")
-
-
-async def after_application(**kwargs):
+    yield
     logging.info("Agents plugin stopped")
 
 
 async def before_chat(messages: list, **kwargs):
     if messages[0]["role"] == "system":
         messages[0]["content"] += f"{agents}\n\n"
-
-
-async def after_chat(**kwargs):
-    pass
-
-
-async def before_model(**kwargs):
-    pass
-
-
-async def after_model(**kwargs):
-    pass
-
-
-async def before_tool(**kwargs):
-    pass
-
-
-async def after_tool(**kwargs):
-    pass

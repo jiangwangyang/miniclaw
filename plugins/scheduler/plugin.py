@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import httpx
@@ -111,7 +112,8 @@ async def run_task_now(task_id: str):
     return JSONResponse(content={"success": True, "message": f"Task {task_id} execution started"})
 
 
-async def before_application(app: FastAPI, **kwargs):
+@asynccontextmanager
+async def lifespan(app: FastAPI, **kwargs):
     global scheduler, async_client
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
@@ -121,33 +123,7 @@ async def before_application(app: FastAPI, **kwargs):
         scheduler.start()
     app.include_router(router)
     logging.info("Scheduler plugin started, scheduler running")
-
-
-async def after_application(**kwargs):
+    yield
     if scheduler.running:
         scheduler.shutdown()
     logging.info("Scheduler plugin stopped")
-
-
-async def before_chat(**kwargs):
-    pass
-
-
-async def after_chat(**kwargs):
-    pass
-
-
-async def before_model(**kwargs):
-    pass
-
-
-async def after_model(**kwargs):
-    pass
-
-
-async def before_tool(**kwargs):
-    pass
-
-
-async def after_tool(**kwargs):
-    pass

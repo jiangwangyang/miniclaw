@@ -74,22 +74,6 @@ async def lifespan(tools: list, **kwargs):
         logging.info("MCP plugin stopped")
 
 
-async def before_chat(**kwargs):
-    pass
-
-
-async def after_chat(**kwargs):
-    pass
-
-
-async def before_model(**kwargs):
-    pass
-
-
-async def after_model(**kwargs):
-    pass
-
-
 # 执行工具
 async def before_tool(messages: list, tool_call: dict, **kwargs):
     tool_name = tool_call["function"]["name"]
@@ -103,7 +87,3 @@ async def before_tool(messages: list, tool_call: dict, **kwargs):
         tool_content = f"Error: {e}"
     tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
     messages.append(tool_message)
-
-
-async def after_tool(**kwargs):
-    pass

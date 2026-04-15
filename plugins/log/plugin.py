@@ -1,12 +1,12 @@
 import json
 import logging
+from contextlib import asynccontextmanager
 
 
-async def before_application(**kwargs):
+@asynccontextmanager
+async def lifespan(**kwargs):
     logging.info("Logging plugin started")
-
-
-async def after_application(**kwargs):
+    yield
     logging.info("Logging plugin stopped")
 
 
@@ -18,16 +18,8 @@ async def after_chat(assistant_content: str, **kwargs):
     logging.info(f"Assistant: {json.dumps(assistant_content, ensure_ascii=False)}")
 
 
-async def before_model(**kwargs):
-    pass
-
-
 async def after_model(messages: list, **kwargs):
     logging.info(f"Model: {json.dumps(messages[-1], ensure_ascii=False)}")
-
-
-async def before_tool(**kwargs):
-    pass
 
 
 async def after_tool(messages: list, **kwargs):

@@ -4,6 +4,7 @@ import logging
 import queue
 import threading
 import uuid
+from contextlib import asynccontextmanager
 
 import lark_oapi as lark
 import requests
@@ -94,7 +95,8 @@ def event_listener():
     ws_client.start()
 
 
-async def before_application(**kwargs):
+@asynccontextmanager
+async def lifespan(**kwargs):
     global lark_app_id, lark_app_secret
     with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
         settings = json.load(f)
@@ -110,31 +112,5 @@ async def before_application(**kwargs):
     message_consumer_thread.start()
     event_listener_thread.start()
     logging.info("Lark channel plugin started")
-
-
-async def after_application(**kwargs):
+    yield
     logging.info("Lark channel plugin stopped")
-
-
-async def before_chat(**kwargs):
-    pass
-
-
-async def after_chat(**kwargs):
-    pass
-
-
-async def before_model(**kwargs):
-    pass
-
-
-async def after_model(**kwargs):
-    pass
-
-
-async def before_tool(**kwargs):
-    pass
-
-
-async def after_tool(**kwargs):
-    pass

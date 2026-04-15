@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, APIRouter, Path
 from fastapi.responses import JSONResponse
@@ -61,12 +62,11 @@ async def delete_session(session_id: str = Path(..., alias="id")):
     return JSONResponse(content={"success": True, "message": "会话已删除"})
 
 
-async def before_application(app: FastAPI, **kwargs):
+@asynccontextmanager
+async def lifespan(app: FastAPI, **kwargs):
     app.include_router(router)
     logging.info("Session plugin started")
-
-
-async def after_application(**kwargs):
+    yield
     logging.info("Session plugin stopped")
 
 
@@ -93,19 +93,3 @@ async def after_chat(session_id: str, messages: list, **kwargs):
         os.makedirs(SESSIONS_DIR)
     with open(os.path.join(SESSIONS_DIR, f"{session_id}.json"), "w", encoding="utf-8") as f:
         json.dump([msg for msg in messages if msg["role"] != "system"], f, ensure_ascii=False)
-
-
-async def before_model(**kwargs):
-    pass
-
-
-async def after_model(**kwargs):
-    pass
-
-
-async def before_tool(**kwargs):
-    pass
-
-
-async def after_tool(**kwargs):
-    pass

@@ -1,13 +1,11 @@
 import asyncio
 import json
 import logging
-import os
-import pathlib
 import platform
 import sys
 from asyncio import subprocess
+from contextlib import asynccontextmanager
 
-WORK_DIR = pathlib.Path.home() / "miniclaw"
 SHELL_TOOL = {
     "type": "function",
     "function": {
@@ -27,51 +25,31 @@ SHELL_TOOL = {
 }
 
 
-async def shell(command: str) -> str:
-    if not os.path.exists(WORK_DIR):
-        os.makedirs(WORK_DIR)
-    process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=WORK_DIR)
+async def shell(command: str, work_dir: str) -> str:
+    process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=work_dir)
     stdout, stderr = await process.communicate()
     return f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
 
 
-async def before_application(tools: list, **kwargs):
-    if not sys.platform.startswith("win"):
+@asynccontextmanager
+async def lifespan(tools: list, **kwargs):
+    if sys.platform.startswith("win"):
+        logging.info("Shell tool plugin not supported on Windows")
+        yield
+    else:
         tools.append(SHELL_TOOL)
-        logging.info(f"Adding shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
+        logging.info(f"Shell tool plugin started, adding shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
+        yield
+        logging.info("Shell tool plugin stopped")
 
 
-async def after_application(**kwargs):
-    pass
-
-
-async def before_chat(**kwargs):
-    pass
-
-
-async def after_chat(**kwargs):
-    pass
-
-
-async def before_model(**kwargs):
-    pass
-
-
-async def after_model(**kwargs):
-    pass
-
-
-async def before_tool(messages: list, tool_call: dict, **kwargs):
+async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):
     if tool_call["function"]["name"] != "shell":
         return
     try:
         args = json.loads(tool_call["function"]["arguments"])
-        tool_content = await shell(args.get("command", ""))
+        tool_content = await shell(args.get("command", ""), work_dir)
     except Exception as e:
         tool_content = f"Error: {e}"
     tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
     messages.append(tool_message)
-
-
-async def after_tool(**kwargs):
-    pass

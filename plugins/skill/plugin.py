@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 
 SKILLS_DIR_LIST = ["skills/", "external_skills/", os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
 skills: list[dict[str, str]] = []
@@ -32,35 +33,14 @@ async def load_skills():
     logging.info(f"Loaded {len(skills)} skills: {json.dumps(skills, ensure_ascii=False)}")
 
 
-async def before_application(tools: list, **kwargs):
+@asynccontextmanager
+async def lifespan(**kwargs):
     await load_skills()
     logging.info("Skill plugin started")
-
-
-async def after_application(**kwargs):
+    yield
     logging.info("Skill plugin stopped")
 
 
 async def before_chat(messages: list, **kwargs):
     if messages[0]["role"] == "system":
         messages[0]["content"] += f"---\nAvailable Skills: {json.dumps(skills, ensure_ascii=False)}\n---\n\n"
-
-
-async def after_chat(**kwargs):
-    pass
-
-
-async def before_model(**kwargs):
-    pass
-
-
-async def after_model(**kwargs):
-    pass
-
-
-async def before_tool(messages: list, tool_call: dict, **kwargs):
-    pass
-
-
-async def after_tool(**kwargs):
-    pass

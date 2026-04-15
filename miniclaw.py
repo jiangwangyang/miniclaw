@@ -158,9 +158,7 @@ async def lifespan(_app: FastAPI):
                     await stack.enter_async_context(module.lifespan(app=_app, tools=tools))
                 except Exception as e:
                     logging.error(f"执行插件 {module.__name__} 的 lifespan 钩子函数失败: {e}", e)
-        await execute_plugins(action="before_application", app=app, tools=tools)
         yield
-        await execute_plugins(action="after_application", app=app)
 
 
 app: FastAPI = FastAPI(lifespan=lifespan)
