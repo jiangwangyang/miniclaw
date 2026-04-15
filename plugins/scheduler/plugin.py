@@ -1,6 +1,5 @@
 import logging
 import os
-import pathlib
 import uuid
 from datetime import datetime
 
@@ -8,13 +7,12 @@ import httpx
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 CHAT_URL = "http://localhost:11223/chat"
 DATA_DIR = "data"
 TASKS_DB_FILE = "data/tasks.db"
-TASKS_HTML_FILE = pathlib.Path(__file__).parent / "static" / "task.html"
 scheduler: AsyncIOScheduler
 async_client: httpx.AsyncClient
 router: APIRouter = APIRouter(prefix="/task")
@@ -56,11 +54,6 @@ def job_to_dict(job) -> dict:
         "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
         "enabled": job.next_run_time is not None
     }
-
-
-@router.get("/task.html")
-async def tasks_html():
-    return FileResponse(TASKS_HTML_FILE)
 
 
 @router.get("/list")
