@@ -284,22 +284,31 @@
             gap: 12px;
         }
 
-        .header-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--charcoal) 0%, var(--slate-gray) 100%);
-            border-radius: 8px;
-            display: flex;
+        .header-nav-btn {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--charcoal);
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition-smooth);
         }
 
-        .header-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 700;
-            letter-spacing: -0.3px;
+        .header-nav-btn:hover {
+            background: var(--charcoal);
+            color: white;
+            border-color: var(--charcoal);
+        }
+
+        .header-nav-btn svg {
+            width: 16px;
+            height: 16px;
         }
 
         .header-session-info {
@@ -893,8 +902,15 @@
 <div class="main-content">
     <div class="header">
         <div class="header-left">
-            <div class="header-icon">💬</div>
-            <span class="header-title">MiniClaw Chat</span>
+            <a class="header-nav-btn" href="/static/task.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                定时任务
+            </a>
         </div>
         <span class="header-session-info" id="sessionInfo"></span>
     </div>

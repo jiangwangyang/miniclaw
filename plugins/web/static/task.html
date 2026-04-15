@@ -89,10 +89,29 @@
         }
 
         .header-accent {
+            position: fixed;
+            top: 24px;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             width: 48px;
-            height: 4px;
-            background: linear-gradient(90deg, var(--color-highlight), var(--color-accent));
-            border-radius: 2px;
+            height: 48px;
+            background: var(--color-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            color: var(--color-text);
+            text-decoration: none;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .header-accent:hover {
+            background: var(--color-bg);
+            border-color: var(--color-text-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
         }
 
         .header-subtitle {
@@ -664,7 +683,11 @@
     <header class="header">
         <div class="header-top">
             <h1>定时任务管理</h1>
-            <div class="header-accent"></div>
+            <a href="/" class="header-accent" title="返回首页">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </a>
         </div>
         <p class="header-subtitle">管理您的自动化任务调度</p>
     </header>
