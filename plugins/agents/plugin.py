@@ -1,25 +1,44 @@
 import json
 import logging
-import os
+import pathlib
 from contextlib import asynccontextmanager
 
-AGENTS_FILE_LIST = ["AGENTS.md", os.path.expanduser("~/.miniclaw/AGENTS.md"), os.path.expanduser("~/.agents/AGENTS.md")]
+import anyio
+from fastapi import APIRouter, Body, FastAPI
+
+AGENTS_FILE_LIST = ["AGENTS.md", str(pathlib.Path.home() / ".agents" / "AGENTS.md")]
 agents: str = ""
+router: APIRouter = APIRouter()
 
 
 async def load_agents():
     global agents
     for agents_file in AGENTS_FILE_LIST:
-        if os.path.isfile(agents_file):
-            with open(agents_file, "r", encoding="utf-8") as f:
-                agents = f.read()
+        agents_file = anyio.Path(agents_file)
+        if await agents_file.is_file():
+            agents = await agents_file.read_text()
+            logging.info(f"Loaded agents: {json.dumps(agents, ensure_ascii=False)}")
             break
-    logging.info(f"Loaded agents: {json.dumps(agents, ensure_ascii=False)}")
+
+
+@router.get("/agents")
+async def get_agents():
+    return {
+        "content": agents
+    }
+
+
+@router.post("/agents")
+async def save_agents(content: str = Body(...)):
+    agents_file = anyio.Path("AGENTS.md")
+    await agents_file.write_text(content, encoding="utf-8")
+    await load_agents()
 
 
 @asynccontextmanager
-async def lifespan(**kwargs):
+async def lifespan(app: FastAPI, **kwargs):
     await load_agents()
+    app.include_router(router)
     logging.info("Agents plugin started")
     yield
     logging.info("Agents plugin stopped")
