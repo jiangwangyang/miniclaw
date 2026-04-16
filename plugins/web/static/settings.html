@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置管理 - MiniClaw</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --charcoal: #36454f;
+            --slate-gray: #708090;
+            --light-gray: #d3d3d3;
+            --crisp-white: #ffffff;
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --border-color: #e5e7eb;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --shadow-soft: 0 2px 8px rgba(54, 69, 79, 0.08);
+            --shadow-elevated: 0 4px 20px rgba(54, 69, 79, 0.12);
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--charcoal);
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background: var(--bg-secondary);
+            padding: 0.75rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-soft);
+            z-index: 10;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--slate-gray);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: var(--transition-smooth);
+        }
+
+        .back-btn:hover {
+            background: var(--bg-primary);
+            color: var(--charcoal);
+            border-color: var(--slate-gray);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            overflow: hidden;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .textarea-wrapper {
+            flex: 1;
+            width: 100%;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            background: var(--bg-primary);
+            padding: 0;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 900px;
+            height: 100%;
+            min-height: 100%;
+            padding: 2rem 3rem;
+            border: none;
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            resize: none;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--charcoal);
+            outline: none;
+            background: var(--bg-secondary);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.02);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .save-btn {
+            background: var(--charcoal);
+            color: white;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .save-btn:hover:not(:disabled) {
+            background: #2d3a43;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-elevated);
+        }
+
+        .save-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--slate-gray);
+            box-shadow: none;
+            transform: none;
+        }
+
+        #status-msg {
+            font-size: 0.875rem;
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 4px 12px;
+            border-radius: 8px;
+        }
+
+        .status-success {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .status-error {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="header-left">
+        <a href="/" class="back-btn">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.8333 10H4.16667" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 15.8333L4.16667 10L10 4.16667" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            返回
+        </a>
+        <h1>settings.json</h1>
+    </div>
+    <div class="header-right">
+        <div id="status-msg"></div>
+        <button id="save-btn" class="btn save-btn">保存设置</button>
+    </div>
+</header>
+
+<main>
+    <div class="editor-container">
+        <div class="textarea-wrapper">
+            <label for="settings-content"></label>
+            <textarea id="settings-content" placeholder="在此输入 JSON 格式的配置..." spellcheck="false"></textarea>
+        </div>
+    </div>
+</main>
+
+<script>
+    const textarea = document.getElementById('settings-content');
+    const saveBtn = document.getElementById('save-btn');
+    const statusMsg = document.getElementById('status-msg');
+
+    function showStatus(message, isError = false) {
+        statusMsg.textContent = message;
+        statusMsg.className = isError ? 'status-error' : 'status-success';
+        statusMsg.style.display = 'flex';
+        if (!isError) {
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 3000);
+        }
+    }
+
+    async function fetchSettings() {
+        try {
+            const response = await fetch('/settings');
+            if (!response.ok) {
+                if (response.status === 404) {
+                    textarea.value = '{}';
+                    return;
+                }
+                throw new Error('Failed to fetch');
+            }
+            const data = await response.json();
+            textarea.value = JSON.stringify(data, null, 2);
+        } catch (error) {
+            console.error('Failed to fetch settings:', error);
+            showStatus('加载失败', true);
+        }
+    }
+
+    async function saveSettings() {
+        const content = textarea.value.trim();
+
+        // Validate JSON
+        try {
+            JSON.parse(content);
+        } catch (e) {
+            showStatus('JSON 格式不正确: ' + e.message, true);
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = '保存中...';
+        try {
+            const response = await fetch('/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(content),
+            });
+
+            if (response.ok) {
+                showStatus('保存成功');
+            } else {
+                const errData = await response.json();
+                throw new Error(errData.detail || 'Save failed');
+            }
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            showStatus('保存失败: ' + error.message, true);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '保存设置';
+        }
+    }
+
+    saveBtn.addEventListener('click', saveSettings);
+
+    // Shortcut: Cmd/Ctrl + S to save
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+            e.preventDefault();
+            saveSettings();
+        }
+    });
+
+    // Tab support in textarea
+    textarea.addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 2;
+        }
+    });
+
+    // Initial fetch
+    fetchSettings();
+</script>
+</body>
+</html>

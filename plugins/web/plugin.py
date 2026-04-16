@@ -1,12 +1,15 @@
+import json
 import logging
 import pathlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+import anyio
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Body
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
-STATIC_PATH = pathlib.Path(__file__).parent / "static"
+SETTINGS_FILE = "settings.json"
+STATIC_DIR = str(pathlib.Path(__file__).parent / "static")
 router = APIRouter()
 
 
@@ -18,27 +21,42 @@ async def index():
 @router.get("/dir/list")
 async def list_directory(path: str = Query(...)):
     # 如果没有传入路径，默认显示用户目录
-    target_path = pathlib.Path(path) if path else pathlib.Path.home()
-    if not target_path.exists() or not target_path.is_dir():
+    target_path = anyio.Path(path) if path else await anyio.Path.home()
+    if not await target_path.exists() or not await target_path.is_dir():
         raise HTTPException(status_code=404, detail="Directory not found")
     directories = []
     # 只列出目录
-    for entry in target_path.iterdir():
-        if entry.is_dir():
+    async for child_path in target_path.iterdir():
+        if await child_path.is_dir():
             directories.append({
-                "name": entry.name,
-                "path": str(entry.absolute())
+                "name": child_path.name,
+                "path": str(await child_path.absolute())
             })
     return {
-        "current_path": str(target_path.absolute()),
-        "parent_path": str(target_path.parent.absolute()),
+        "current_path": str(await target_path.absolute()),
+        "parent_path": str(await target_path.parent.absolute()),
         "directories": sorted(directories, key=lambda x: x['name'])
     }
 
 
+@router.get("/settings")
+async def get_settings():
+    settings_file = anyio.Path(SETTINGS_FILE)
+    if not await settings_file.exists():
+        raise HTTPException(status_code=404, detail="Settings file not found")
+    return json.loads(await settings_file.read_text(encoding="utf-8"))
+
+
+@router.post("/settings")
+async def save_settings(content: str = Body(...)):
+    json.loads(content)
+    settings_file = anyio.Path(SETTINGS_FILE)
+    await settings_file.write_text(content, encoding="utf-8")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
-    app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(router)
     logging.info("Web plugin started")
     yield
