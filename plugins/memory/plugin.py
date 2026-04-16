@@ -1,8 +1,8 @@
-import json
 import logging
-import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+
+import anyio
 
 MEMORY_DIR = "data/memory"
 MEMORY_FILE = "data/memory/MEMORY.md"
@@ -17,11 +17,10 @@ async def lifespan(**kwargs):
 
 async def before_chat(messages: list, **kwargs):
     if messages[0]["role"] == "system":
-        messages[0]["content"] += f"---\nHistory memory: {os.path.abspath(MEMORY_FILE)}\n---\n\n"
+        messages[0]["content"] += f"---\nHistory memory: {str(await anyio.Path(MEMORY_FILE).absolute())}\n---\n\n"
 
 
 async def after_chat(user_content: str, assistant_content: str, **kwargs):
-    if not os.path.exists(MEMORY_DIR):
-        os.makedirs(MEMORY_DIR)
-    with open(MEMORY_FILE, "a", encoding="utf-8") as f:
-        f.write(f"---\nTime: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\nUser: {json.dumps(user_content, ensure_ascii=False)}\nAssistant: {json.dumps(assistant_content, ensure_ascii=False)}\n---\n\n")
+    await anyio.Path(MEMORY_DIR).mkdir(parents=True, exist_ok=True)
+    async with await anyio.Path(MEMORY_FILE).open(mode="a", encoding="utf-8") as f:
+        await f.write(f"{user_content}\n\n{assistant_content}\n\n---\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n---\n\n")

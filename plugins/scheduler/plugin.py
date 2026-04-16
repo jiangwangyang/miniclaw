@@ -1,21 +1,22 @@
 import logging
-import os
+import pathlib
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 
+import anyio
 import httpx
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 CHAT_URL = "http://localhost:11223/chat"
 DATA_DIR = "data"
-TASKS_DB_FILE = "data/tasks.db"
-scheduler: AsyncIOScheduler
-async_client: httpx.AsyncClient
+DB_URL = "sqlite:///data/tasks.db"
+pathlib.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
+scheduler: AsyncIOScheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=DB_URL)})
+async_client: httpx.AsyncClient = httpx.AsyncClient()
 router: APIRouter = APIRouter(prefix="/task")
 
 
@@ -60,20 +61,13 @@ def job_to_dict(job) -> dict:
 @router.get("/list")
 async def list_tasks():
     jobs = scheduler.get_jobs()
-    result = [job_to_dict(job) for job in jobs]
-    return JSONResponse(content={"success": True, "data": result, "total": len(result)})
+    return [job_to_dict(job) for job in jobs]
 
 
 @router.post("")
 async def save_task(task: TaskEntity):
     task_id = str(uuid.uuid4())
     scheduler.add_job(execute_task, "cron", id=task_id, name=task.name, args=[task_id, task.name, task.content], year=task.year, month=task.month, day=task.day, week=task.week, day_of_week=task.day_of_week, hour=task.hour, minute=task.minute, second=task.second)
-    job = scheduler.get_job(task_id)
-    return JSONResponse(content={
-        "success": True,
-        "message": f"Task {task_id} created",
-        "data": job_to_dict(job)
-    })
 
 
 @router.delete("/{task_id}")
@@ -82,7 +76,6 @@ async def delete_task_by_id(task_id: str):
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
     scheduler.remove_job(task_id)
-    return JSONResponse(content={"success": True, "message": f"Task {task_id} deleted"})
 
 
 @router.post("/{task_id}/enable")
@@ -91,7 +84,6 @@ async def enable_task_by_id(task_id: str):
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
     scheduler.resume_job(task_id)
-    return JSONResponse(content={"success": True, "message": f"Task {task_id} enabled"})
 
 
 @router.post("/{task_id}/disable")
@@ -100,7 +92,6 @@ async def disable_task_by_id(task_id: str):
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
     scheduler.pause_job(task_id)
-    return JSONResponse(content={"success": True, "message": f"Task {task_id} disabled"})
 
 
 @router.post("/{task_id}/run")
@@ -109,16 +100,11 @@ async def run_task_now(task_id: str):
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
     scheduler.modify_job(job.id, next_run_time=datetime.now())
-    return JSONResponse(content={"success": True, "message": f"Task {task_id} execution started"})
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
-    global scheduler, async_client
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR)
-    scheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///{TASKS_DB_FILE}")})
-    async_client = httpx.AsyncClient()
+    await anyio.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
     if not scheduler.running:
         scheduler.start()
     app.include_router(router)

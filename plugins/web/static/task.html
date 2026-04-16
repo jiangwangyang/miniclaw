@@ -820,16 +820,9 @@
     async function fetchTasks() {
         try {
             const response = await fetch(`${API_BASE}${API_PREFIX}/list`);
-            const result = await response.json();
-
-            if (result.success) {
-                tasks = result.data || [];
-                renderTasks();
-                updateStats();
-            } else {
-                showToast('获取任务列表失败', 'error');
-                renderEmptyState();
-            }
+            tasks = await response.json();
+            renderTasks();
+            updateStats();
         } catch (error) {
             console.error('Fetch tasks error:', error);
             showToast('无法连接到服务器', 'error');
@@ -998,70 +991,11 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(task)
             });
-            const result = await response.json();
-
-            if (result.success) {
-                showToast('任务创建成功', 'success');
-                closeModal();
-                fetchTasks();
-            } else {
-                showToast(result.message || '创建失败', 'error');
-            }
+            showToast('任务创建成功', 'success');
+            closeModal();
+            fetchTasks();
         } catch (error) {
             console.error('Create task error:', error);
-            showToast('网络错误', 'error');
-        }
-    }
-
-    // POST /task/{id}/enable
-    async function enableTask(id) {
-        try {
-            const response = await fetch(`${API_BASE}${API_PREFIX}/${id}/enable`, {method: 'POST'});
-            const result = await response.json();
-
-            if (result.success) {
-                showToast('任务启用成功', 'success');
-                fetchTasks();
-            } else {
-                showToast(result.message || '操作失败', 'error');
-            }
-        } catch (error) {
-            console.error('Enable task error:', error);
-            showToast('网络错误', 'error');
-        }
-    }
-
-    // POST /task/{id}/disable
-    async function disableTask(id) {
-        try {
-            const response = await fetch(`${API_BASE}${API_PREFIX}/${id}/disable`, {method: 'POST'});
-            const result = await response.json();
-
-            if (result.success) {
-                showToast('任务禁用成功', 'success');
-                fetchTasks();
-            } else {
-                showToast(result.message || '操作失败', 'error');
-            }
-        } catch (error) {
-            console.error('Disable task error:', error);
-            showToast('网络错误', 'error');
-        }
-    }
-
-    // POST /task/{id}/run
-    async function runTask(id) {
-        try {
-            const response = await fetch(`${API_BASE}${API_PREFIX}/${id}/run`, {method: 'POST'});
-            const result = await response.json();
-
-            if (result.success) {
-                showToast('任务已立即执行', 'success');
-            } else {
-                showToast(result.message || '执行失败', 'error');
-            }
-        } catch (error) {
-            console.error('Run task error:', error);
             showToast('网络错误', 'error');
         }
     }
@@ -1072,16 +1006,45 @@
 
         try {
             const response = await fetch(`${API_BASE}${API_PREFIX}/${id}`, {method: 'DELETE'});
-            const result = await response.json();
-
-            if (result.success) {
-                showToast('任务已删除', 'success');
-                fetchTasks();
-            } else {
-                showToast(result.message || '删除失败', 'error');
-            }
+            showToast('任务已删除', 'success');
+            fetchTasks();
         } catch (error) {
             console.error('Delete task error:', error);
+            showToast('网络错误', 'error');
+        }
+    }
+
+    // POST /task/{id}/enable
+    async function enableTask(id) {
+        try {
+            const response = await fetch(`${API_BASE}${API_PREFIX}/${id}/enable`, {method: 'POST'});
+            showToast('任务启用成功', 'success');
+            fetchTasks();
+        } catch (error) {
+            console.error('Enable task error:', error);
+            showToast('网络错误', 'error');
+        }
+    }
+
+    // POST /task/{id}/disable
+    async function disableTask(id) {
+        try {
+            const response = await fetch(`${API_BASE}${API_PREFIX}/${id}/disable`, {method: 'POST'});
+            showToast('任务禁用成功', 'success');
+            fetchTasks();
+        } catch (error) {
+            console.error('Disable task error:', error);
+            showToast('网络错误', 'error');
+        }
+    }
+
+    // POST /task/{id}/run
+    async function runTask(id) {
+        try {
+            const response = await fetch(`${API_BASE}${API_PREFIX}/${id}/run`, {method: 'POST'});
+            showToast('任务已立即执行', 'success');
+        } catch (error) {
+            console.error('Run task error:', error);
             showToast('网络错误', 'error');
         }
     }

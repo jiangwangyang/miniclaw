@@ -6,6 +6,7 @@ import threading
 import uuid
 from contextlib import asynccontextmanager
 
+import anyio
 import lark_oapi as lark
 import requests
 from lark_oapi.api.im.v1 import *
@@ -98,10 +99,9 @@ def event_listener():
 @asynccontextmanager
 async def lifespan(**kwargs):
     global lark_app_id, lark_app_secret
-    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-        settings = json.load(f)
-    lark_app_id = settings.get("lark_app_id", "")
-    lark_app_secret = settings.get("lark_app_secret", "")
+    settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+    settings = json.loads(settings_content)
+    lark_app_id, lark_app_secret = settings.get("lark_app_id", ""), settings.get("lark_app_secret", "")
     if not lark_app_id or not lark_app_secret:
         return
     # 启动 消费者线程 消息监听线程

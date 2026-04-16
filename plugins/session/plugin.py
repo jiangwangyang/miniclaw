@@ -3,14 +3,17 @@ import logging
 from contextlib import asynccontextmanager
 
 import aiosqlite
+import anyio
 from fastapi import FastAPI, APIRouter, Path, HTTPException
 
+DATA_DIR = "data"
 DB_FILE = "data/session.db"
 router: APIRouter = APIRouter(prefix="/session")
 
 
 # 初始化数据库
 async def init_db():
+    await anyio.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("PRAGMA foreign_keys = ON")
         await db.execute("CREATE TABLE IF NOT EXISTS t_session (id TEXT PRIMARY KEY, title TEXT, work_dir TEXT, create_time DATETIME DEFAULT CURRENT_TIMESTAMP, update_time DATETIME DEFAULT CURRENT_TIMESTAMP)")

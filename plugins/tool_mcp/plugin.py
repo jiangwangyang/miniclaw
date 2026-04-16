@@ -2,6 +2,7 @@ import json
 import logging
 from contextlib import asynccontextmanager, AsyncExitStack
 
+import anyio
 from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
@@ -52,8 +53,8 @@ async def register_mcp_client(name, proto_type, **kwargs):
 async def lifespan(tools: list, **kwargs):
     async with AsyncExitStack() as stack:
         # 加载设置
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            settings = json.load(f)
+        settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+        settings = json.loads(settings_content)
         # 创建MCP客户端
         for name, server in (settings.get("mcpServers") or {}).items():
             try:
