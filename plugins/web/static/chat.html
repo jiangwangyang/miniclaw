@@ -698,30 +698,6 @@
             }
         }
 
-        .quick-hints {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-            flex-wrap: wrap;
-        }
-
-        .quick-hint {
-            padding: 8px 14px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 12px;
-            color: var(--slate-gray);
-            cursor: pointer;
-            transition: var(--transition-smooth);
-        }
-
-        .quick-hint:hover {
-            border-color: var(--charcoal);
-            color: var(--charcoal);
-            background: var(--bg-primary);
-        }
-
         .confirm-overlay {
             position: fixed;
             top: 0;
@@ -862,6 +838,77 @@
             font-family: 'SF Mono', monospace;
         }
 
+        .dir-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .dir-modal {
+            background: var(--bg-secondary);
+            width: 90%;
+            max-width: 600px;
+            height: 70vh;
+            margin: 10vh auto;
+            border-radius: 16px;
+            box-shadow: var(--shadow-elevated);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .dir-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dir-modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .dir-item {
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--charcoal);
+            transition: var(--transition-smooth);
+        }
+
+        .dir-item:hover {
+            background: var(--bg-primary);
+        }
+
+        .dir-item-icon {
+            font-size: 18px;
+            color: var(--slate-gray);
+        }
+
+        .dir-modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background: var(--bg-primary);
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 width: 240px;
@@ -911,6 +958,35 @@
                 </svg>
                 定时任务
             </a>
+            <a class="header-nav-btn" href="/static/skill.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                技能管理
+            </a>
+            <a class="header-nav-btn" href="/static/mcp.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                MCP管理
+            </a>
+            <a class="header-nav-btn" href="/static/agents.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                Agent管理
+            </a>
+            <a class="header-nav-btn" href="/static/settings.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                系统设置
+            </a>
         </div>
         <span class="header-session-info" id="sessionInfo"></span>
     </div>
@@ -945,6 +1021,26 @@
     </div>
 </div>
 
+<div id="dirModalOverlay" class="dir-modal-overlay">
+    <div class="dir-modal">
+        <div class="dir-modal-header">
+            <h3 class="confirm-title" style="margin-bottom:0">选择工作区</h3>
+            <span id="currentPathDisplay" style="font-size:12px; color:var(--slate-gray); font-family:monospace"></span>
+            <button class="delete-btn" onclick="closeDirModal()" style="opacity:1">✕</button>
+        </div>
+        <div style="padding: 12px 24px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px; background: #fff;">
+            <input type="text" id="manualPathInput" style="flex:1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: monospace; font-size: 13px; outline: none;" placeholder="手动输入或粘贴路径...">
+            <button class="btn" style="padding: 8px 16px; font-size: 12px; background: var(--charcoal); color: white;" onclick="handleManualJump()">跳转</button>
+        </div>
+        <div id="dirList" class="dir-modal-content"></div>
+        <div class="dir-modal-footer">
+            <button class="confirm-btn cancel" onclick="closeDirModal()">取消</button>
+            <button class="confirm-btn danger" style="background:var(--charcoal)" onclick="confirmDirSelection()">选择当前目录</button>
+        </div>
+    </div>
+</div>
+</body>
+
 <script>
     const chatContainer = document.getElementById('chatContainer');
     const messageInput = document.getElementById('messageInput');
@@ -954,26 +1050,120 @@
     const sessionList = document.getElementById('sessionList');
     const sessionInfo = document.getElementById('sessionInfo');
     const emptyState = document.getElementById('emptyState');
+    const manualPathInput = document.getElementById('manualPathInput');
 
     let currentSessionId = null;
     let isTyping = false;
     let currentEventSource = null;
     let currentWorkdir = '';
+    let tempSelectedPath = "";
 
-    // 选择工作区的函数
-    async function selectWorkspace() {
-        try {
-            const response = await fetch('/dir/select');
-            const data = await response.json();
-            if (data.path) {
-                currentWorkdir = data.path;
-                document.getElementById('workspaceDisplay').textContent = data.path;
-                document.getElementById('workspaceDisplay').title = data.path;
+    // 页面加载初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        // 基础 UI 初始化
+        initDefaultWorkspace();
+        loadSessionList();
+
+        // 事件绑定
+        messageInput.addEventListener('input', autoResize);
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
             }
+        });
+
+        manualPathInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleManualJump();
+        });
+
+        // 会话恢复
+        const savedSessionId = localStorage.getItem('miniclaw_current_session');
+        savedSessionId ? loadSession(savedSessionId) : startNewChat();
+    });
+
+    // 远程加载目录列表
+    async function loadDirList(path) {
+        const dirListContainer = document.getElementById('dirList');
+        const pathDisplay = document.getElementById('currentPathDisplay');
+
+        dirListContainer.innerHTML = '<div style="padding:20px; text-align:center; color:var(--slate-gray)">加载中...</div>';
+
+        try {
+            const response = await fetch(`/dir/list?path=${encodeURIComponent(path)}`);
+            const data = await response.json();
+
+            tempSelectedPath = data.current_path;
+            pathDisplay.textContent = data.current_path;
+            dirListContainer.innerHTML = "";
+
+            // 添加返回上级
+            if (data.parent_path && data.parent_path !== data.current_path) {
+                const upItem = createDirItem(".. (返回上一级)", data.parent_path, "⬆️");
+                dirListContainer.appendChild(upItem);
+            }
+
+            // 渲染文件夹
+            data.directories.forEach(dir => {
+                const item = createDirItem(dir.name, dir.path, "📁");
+                dirListContainer.appendChild(item);
+            });
         } catch (error) {
-            console.error('选择工作区失败:', error);
-            alert('无法调用目录选择器，请确保后端服务已实现 /dir/select 接口');
+            console.error('加载目录列表失败', error);
+            dirListContainer.innerHTML = '<div style="padding:20px; color:var(--danger-color)">加载失败，请检查后端 API</div>';
         }
+    }
+
+    // 获取默认工作目录
+    async function initDefaultWorkspace() {
+        try {
+            const response = await fetch(`/dir/list?path=`);
+            const data = await response.json();
+            if (data.current_path) {
+                updateWorkspaceUI(data.current_path);
+            }
+        } catch (e) {
+            console.error('获取默认路径失败');
+        }
+    }
+
+    // 点击工作区按钮打开 Web 浏览器
+    async function selectWorkspace() {
+        document.getElementById('dirModalOverlay').style.display = 'block';
+        loadDirList(currentWorkdir || "");
+    }
+
+    // 手动跳转逻辑
+    function handleManualJump() {
+        const targetPath = manualPathInput.value.trim();
+        if (targetPath) {
+            loadDirList(targetPath);
+        }
+    }
+
+    function createDirItem(name, path, icon) {
+        const div = document.createElement('div');
+        div.className = 'dir-item';
+        div.innerHTML = `<span class="dir-item-icon">${icon}</span><span>${name}</span>`;
+        div.onclick = () => loadDirList(path);
+        return div;
+    }
+
+    function confirmDirSelection() {
+        updateWorkspaceUI(tempSelectedPath);
+        closeDirModal();
+    }
+
+    function updateWorkspaceUI(path) {
+        currentWorkdir = path;
+        const display = document.getElementById('workspaceDisplay');
+        display.textContent = path;
+        display.title = path;
+        localStorage.setItem('miniclaw_last_workdir', path); // 可选：持久化到本地
+    }
+
+    function closeDirModal() {
+        document.getElementById('dirModalOverlay').style.display = 'none';
     }
 
     // 自动调整 textarea 高度
@@ -981,30 +1171,6 @@
         messageInput.style.height = 'auto';
         messageInput.style.height = Math.min(messageInput.scrollHeight, 160) + 'px';
     }
-
-    // 页面加载时初始化
-    document.addEventListener('DOMContentLoaded', () => {
-        loadSessionList();
-
-        // 监听输入事件，自动调整高度
-        messageInput.addEventListener('input', autoResize);
-
-        // 回车发送，Shift+Enter 换行
-        messageInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // 自动初始化会话：尝试恢复上次会话，否则创建新会话
-        const savedSessionId = localStorage.getItem('miniclaw_current_session');
-        if (savedSessionId) {
-            loadSession(savedSessionId);
-        } else {
-            startNewChat();
-        }
-    });
 
     // 加载会话列表
     async function loadSessionList() {
@@ -1338,5 +1504,4 @@
         }
     }
 </script>
-</body>
 </html>
