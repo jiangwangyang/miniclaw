@@ -84,7 +84,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
         {"role": "user", "content": user_content}
     ]
     # before_chat
-    await execute_plugins(action="before_chat", session_id=session_id, messages=messages, user_content=user_content)
+    await execute_plugins(action="before_chat", session_id=session_id, messages=messages, user_content=user_content, work_dir=work_dir)
 
     while True:
         if not session_flag.get(session_id, False):
@@ -137,7 +137,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
             break
 
     # after chat
-    await execute_plugins(action="after_chat", session_id=session_id, messages=messages, user_content=user_content, assistant_content=assistant_content)
+    await execute_plugins(action="after_chat", session_id=session_id, messages=messages, user_content=user_content, assistant_content=assistant_content, work_dir=work_dir)
     # session end
     if session_id in session_flag:
         del session_flag[session_id]

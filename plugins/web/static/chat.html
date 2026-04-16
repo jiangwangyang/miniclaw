@@ -1245,18 +1245,12 @@
             const response = await fetch(`/session/${sessionId}`, {
                 method: 'DELETE'
             });
-            const result = await response.json();
-
-            if (result.success) {
-                // 如果删除的是当前会话，开始新对话
-                if (currentSessionId === sessionId) {
-                    startNewChat();
-                }
-                // 刷新会话列表
-                loadSessionList();
-            } else {
-                console.error('删除失败:', result.message);
+            // 如果删除的是当前会话，开始新对话
+            if (currentSessionId === sessionId) {
+                startNewChat();
             }
+            // 刷新会话列表
+            await loadSessionList();
         } catch (error) {
             console.error('删除会话失败:', error);
         }
@@ -1285,6 +1279,9 @@
             const items = sessionList.querySelectorAll('.session-item');
             items.forEach(item => item.classList.remove('active'));
         });
+
+        // 重置工作目录
+        initDefaultWorkspace();
     }
 
     // 加载指定会话
@@ -1295,6 +1292,9 @@
         try {
             const response = await fetch(`/session/${sessionId}`);
             const data = await response.json();
+
+            // 更新工作目录
+            updateWorkspaceUI(data.work_dir);
 
             // 清空聊天区域
             chatContainer.innerHTML = '';
