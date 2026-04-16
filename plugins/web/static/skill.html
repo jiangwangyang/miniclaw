@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技能工作台 - MiniClaw</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --charcoal: #36454f;
+            --slate-gray: #708090;
+            --light-gray: #e5e7eb;
+            --crisp-white: #ffffff;
+            --bg-primary: #f9fafb;
+            --bg-secondary: #ffffff;
+            --border-color: #e5e7eb;
+            --accent-color: #36454f;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--charcoal);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Navigation */
+        .navbar {
+            height: 64px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--slate-gray);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .back-link:hover {
+            background: var(--bg-primary);
+            color: var(--charcoal);
+        }
+
+        .nav-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--slate-gray);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .new-btn {
+            background: var(--charcoal);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .new-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .skill-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .skill-item {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .skill-item:hover {
+            background: var(--bg-primary);
+        }
+
+        .skill-item.active {
+            background: #f3f4f6;
+            border-color: var(--border-color);
+        }
+
+        .skill-item-name {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .skill-item-desc {
+            font-size: 13px;
+            color: var(--slate-gray);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Editor Area */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            position: relative;
+        }
+
+        .editor-header {
+            padding: 24px 40px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .label-minimal {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--slate-gray);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .input-minimal {
+            width: 100%;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            outline: none;
+            background: transparent;
+        }
+
+        .input-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--charcoal);
+        }
+
+        .input-desc {
+            font-size: 16px;
+            color: var(--slate-gray);
+        }
+
+        .editor-main {
+            flex: 1;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .markdown-editor {
+            flex: 1;
+            width: 100%;
+            border: none;
+            resize: none;
+            padding: 40px;
+            font-family: 'Fira Code', 'SF Mono', monospace;
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--charcoal);
+            outline: none;
+            background: var(--bg-secondary);
+            overflow-y: auto;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: var(--charcoal);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2d3a43;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:disabled {
+            background: var(--light-gray);
+            cursor: not-allowed;
+        }
+
+        /* Empty State */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--slate-gray);
+            text-align: center;
+        }
+
+        .empty-state svg {
+            margin-bottom: 16px;
+            opacity: 0.2;
+        }
+
+        /* Utility */
+        .loading-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--charcoal);
+            z-index: 1000;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .loading-bar.active {
+            transform: scaleX(1);
+        }
+
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--bg-primary);
+            color: var(--slate-gray);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="loading-bar" id="loadingBar"></div>
+
+<nav class="navbar">
+    <div class="nav-left">
+        <a href="/" class="back-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            返回
+        </a>
+        <div class="nav-title">技能工作台</div>
+    </div>
+    <div class="nav-actions">
+        <span id="saveStatus" class="status-pill" style="display: none;">已保存</span>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveSkill()" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            保存修改
+        </button>
+    </div>
+</nav>
+
+<div class="main-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2 class="sidebar-title">全部技能</h2>
+            <button class="new-btn" onclick="createNewSkill()">+ 新建</button>
+        </div>
+        <div class="skill-list" id="skillList">
+            <!-- Skills populate here -->
+        </div>
+    </aside>
+
+    <main class="editor-container" id="editorContainer">
+        <div class="empty-state" id="emptyState">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <p>选择一个技能开始编辑，或创建一个新技能</p>
+        </div>
+
+        <div id="editorContent" style="display: none; height: 100%; display: flex; flex-direction: column;">
+            <div class="editor-header">
+                <div class="input-group">
+                    <label class="label-minimal" for="skillName">技能唯一标识 (Identifier)</label>
+                    <input type="text" id="skillName" class="input-minimal input-name" placeholder="skill-name">
+                </div>
+                <div class="input-group">
+                    <label class="label-minimal" for="skillDescription">简短描述 (Description)</label>
+                    <input type="text" id="skillDescription" class="input-minimal input-desc" placeholder="描述这个技能是做什么的...">
+                </div>
+                <div class="input-group">
+                    <div id="skillPath" class="label-minimal"></div>
+                </div>
+            </div>
+            <div class="editor-main">
+                <label class="label-minimal" style="padding: 12px 40px 0;" for="skillMarkdown">SKILL.MD 内容</label>
+                <textarea id="skillMarkdown" class="markdown-editor" placeholder="在这里编写技能的 Markdown 内容..."></textarea>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const skillList = document.getElementById('skillList');
+    const editorContent = document.getElementById('editorContent');
+    const emptyState = document.getElementById('emptyState');
+    const saveBtn = document.getElementById('saveBtn');
+    const loadingBar = document.getElementById('loadingBar');
+    const saveStatus = document.getElementById('saveStatus');
+
+    let currentSkillName = null;
+    let originalData = {};
+
+    async function fetchSkills() {
+        showLoading(true);
+        try {
+            const response = await fetch('/skill/list');
+            const skills = await response.json();
+            renderSkillList(skills);
+        } catch (error) {
+            console.error('Failed to load skills:', error);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function renderSkillList(skills) {
+        skillList.innerHTML = '';
+        skills.forEach(skill => {
+            const item = document.createElement('div');
+            item.className = `skill-item ${currentSkillName === skill.name ? 'active' : ''}`;
+            item.onclick = () => loadSkillDetails(skill.name);
+            item.innerHTML = `
+                <div class="skill-item-name">${skill.name}</div>
+                <div class="skill-item-desc">${skill.description}</div>
+                <div class="skill-item-desc">${skill.path}</div>
+            `;
+            skillList.appendChild(item);
+        });
+    }
+
+    async function loadSkillDetails(name) {
+        if (currentSkillName === name && editorContent.style.display === 'flex') return;
+
+        showLoading(true);
+        try {
+            const response = await fetch(`/skill/${name}`);
+            const skill = await response.json();
+
+            currentSkillName = name;
+            originalData = {
+                name: skill.name,
+                description: skill.description,
+                content: skill.content || ''
+            };
+
+            document.getElementById('skillName').value = skill.name;
+            document.getElementById('skillName').disabled = true;
+            document.getElementById('skillDescription').value = skill.description;
+            document.getElementById('skillPath').textContent = skill.path || '';
+            document.getElementById('skillMarkdown').value = skill.content || '';
+
+            showEditor(true);
+            updateActiveItem();
+            checkChanges();
+        } catch (error) {
+            alert('加载技能失败');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function createNewSkill() {
+        currentSkillName = null;
+        document.getElementById('skillName').value = '';
+        document.getElementById('skillName').disabled = false;
+        document.getElementById('skillDescription').value = '';
+        document.getElementById('skillPath').textContent = '';
+        document.getElementById('skillMarkdown').value = '';
+
+        originalData = {name: '', description: '', content: ''};
+        showEditor(true);
+        updateActiveItem();
+        document.getElementById('skillName').focus();
+        checkChanges();
+    }
+
+    async function saveSkill() {
+        const name = document.getElementById('skillName').value.trim();
+        const description = document.getElementById('skillDescription').value.trim();
+        const content = document.getElementById('skillMarkdown').value.trim();
+
+        if (!name || !description || !content) {
+            alert('名称、描述和内容不能为空');
+            return;
+        }
+
+        showLoading(true);
+        try {
+            const response = await fetch(`/skill/${name}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({description, content})
+            });
+
+            if (response.ok) {
+                showSaveStatus();
+                originalData = {name, description, content};
+                currentSkillName = name;
+                document.getElementById('skillName').disabled = true;
+                checkChanges();
+                fetchSkills();
+            } else {
+                alert('保存失败');
+            }
+        } catch (error) {
+            alert('连接服务器失败');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function showEditor(show) {
+        editorContent.style.display = show ? 'flex' : 'none';
+        emptyState.style.display = show ? 'none' : 'flex';
+        saveBtn.disabled = !show;
+    }
+
+    function updateActiveItem() {
+        document.querySelectorAll('.skill-item').forEach(item => {
+            const name = item.querySelector('.skill-item-name').textContent;
+            item.classList.toggle('active', name === currentSkillName);
+        });
+    }
+
+    function checkChanges() {
+        const name = document.getElementById('skillName').value;
+        const description = document.getElementById('skillDescription').value;
+        const content = document.getElementById('skillMarkdown').value;
+
+        const hasChanged = name !== originalData.name ||
+            description !== originalData.description ||
+            content !== originalData.content;
+
+        saveBtn.disabled = !hasChanged || !name;
+    }
+
+    function showLoading(active) {
+        loadingBar.classList.toggle('active', active);
+    }
+
+    function showSaveStatus() {
+        saveStatus.style.display = 'block';
+        setTimeout(() => {
+            saveStatus.style.display = 'none';
+        }, 2000);
+    }
+
+    // Event Listeners
+    document.getElementById('skillName').addEventListener('input', checkChanges);
+    document.getElementById('skillDescription').addEventListener('input', checkChanges);
+    document.getElementById('skillMarkdown').addEventListener('input', checkChanges);
+
+    // Initial Load
+    fetchSkills();
+</script>
+
+</body>
+</html>

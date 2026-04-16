@@ -1,10 +1,14 @@
 import json
 import logging
-import os
+import pathlib
 from contextlib import asynccontextmanager
 
-SKILLS_DIR_LIST = ["skills/", "external_skills/", os.path.expanduser("~/.miniclaw/skills/"), os.path.expanduser("~/.agents/skills/")]
+import anyio
+from fastapi import APIRouter, Path, Body, FastAPI
+
+SKILLS_DIR_LIST = ["external_skills/", "skills/", str(pathlib.Path.home() / ".agents" / "skills")]
 skills: list[dict[str, str]] = []
+router: APIRouter = APIRouter()
 
 
 async def load_skills():
@@ -12,30 +16,71 @@ async def load_skills():
     loaded_skill_names = set()
     # 遍历技能目录
     for skills_dir in SKILLS_DIR_LIST:
-        if not os.path.exists(skills_dir):
+        skills_dir = anyio.Path(skills_dir)
+        if not await skills_dir.exists():
             continue
         # 遍历技能
-        for entry in os.listdir(skills_dir):
-            if entry in loaded_skill_names:
+        async for skill_dir in skills_dir.iterdir():
+            if skill_dir.name in loaded_skill_names:
                 continue
-            skill_file_path = os.path.join(skills_dir, entry, "SKILL.md")
-            if not os.path.isfile(skill_file_path):
+            skill_file = skill_dir / "SKILL.md"
+            if not await skill_file.is_file():
                 continue
             # 尝试读取 SKILL.md 提取 name 和 description
-            with open(skill_file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            if len(lines) >= 4 and lines[0].strip() == "---" and lines[1].strip().startswith("name:") and lines[2].strip().startswith("description:"):
-                name = lines[1].strip()[5:].strip()
-                description = lines[2].strip()[12:].strip()
-                if name == entry:
-                    skills.append({"name": name, "description": description, "path": os.path.abspath(skill_file_path)})
-                    loaded_skill_names.add(name)
+            text = await skill_file.read_text(encoding="utf-8")
+            lines = [line.strip() for line in text.split("\n")]
+            if len(lines) > 0 and lines[0] == "---" and "---" in lines[1:]:
+                second_index = lines.index("---", 1)
+            else:
+                continue
+            name = ""
+            description = ""
+            for line in lines[1:second_index]:
+                if line.startswith("name:"):
+                    name = line[5:].strip()
+                elif line.startswith("description:"):
+                    description = line[12:].strip()
+            if name == skill_dir.name:
+                skills.append({"name": name, "description": description, "path": str(await skill_file.absolute())})
+                loaded_skill_names.add(name)
     logging.info(f"Loaded {len(skills)} skills: {json.dumps(skills, ensure_ascii=False)}")
 
 
-@asynccontextmanager
-async def lifespan(**kwargs):
+@router.get("/skill/list")
+async def get_skill_list():
+    return skills
+
+
+@router.get("/skill/{name}")
+async def get_skill(name: str = Path(...)):
+    filtered_skills = [skill for skill in skills if skill["name"] == name]
+    if not filtered_skills:
+        return {}
+    skill = filtered_skills[0]
+    skill_file = anyio.Path(skill["path"])
+    content = await skill_file.read_text(encoding="utf-8")
+    content = content.split("---\n", 2)[2].strip()
+    return {
+        "name": skill["name"],
+        "description": skill["description"],
+        "path": skill["path"],
+        "content": content,
+    }
+
+
+@router.post("/skill/{name}")
+async def save_skill(name: str = Path(...), description: str = Body(...), content: str = Body(...)):
+    skill_dir = anyio.Path("external_skills") / name
+    await skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = skill_dir / "SKILL.md"
+    await skill_file.write_text(f"---\nname: {name}\ndescription: {description}\n---\n\n{content}", encoding="utf-8")
     await load_skills()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI, **kwargs):
+    await load_skills()
+    app.include_router(router)
     logging.info("Skill plugin started")
     yield
     logging.info("Skill plugin stopped")
