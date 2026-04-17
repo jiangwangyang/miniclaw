@@ -6,21 +6,20 @@
     <title>Agent 管理 - MiniClaw</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
             --charcoal: #36454f;
             --slate-gray: #708090;
-            --light-gray: #d3d3d3;
+            --light-gray: #e5e7eb;
             --crisp-white: #ffffff;
-            --bg-primary: #f8f9fa;
+            --bg-primary: #f9fafb;
             --bg-secondary: #ffffff;
             --border-color: #e5e7eb;
-            --accent-color: #3b82f6;
-            --accent-hover: #2563eb;
-            --shadow-soft: 0 2px 8px rgba(54, 69, 79, 0.08);
-            --shadow-elevated: 0 4px 20px rgba(54, 69, 79, 0.12);
-            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --accent-color: #36454f;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -30,99 +29,96 @@
         }
 
         body {
-            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'DM Sans', sans-serif;
             background: var(--bg-primary);
             color: var(--charcoal);
-            line-height: 1.5;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        header {
+        /* Top Navigation - Unified with skill.html */
+        .navbar {
+            height: 64px;
             background: var(--bg-secondary);
-            padding: 0.75rem 2rem;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: var(--shadow-soft);
-            z-index: 10;
+            padding: 0 24px;
+            z-index: 100;
         }
 
-        .header-left {
+        .nav-left {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 16px;
         }
 
-        .header-right {
+        .back-link {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
-        }
-
-        .back-btn {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 8px 16px;
-            border-radius: 12px;
-            background: transparent;
-            border: 1px solid var(--border-color);
+            gap: 8px;
             color: var(--slate-gray);
             text-decoration: none;
             font-size: 14px;
-            font-weight: 600;
-            transition: var(--transition-smooth);
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: var(--transition);
         }
 
-        .back-btn:hover {
+        .back-link:hover {
             background: var(--bg-primary);
             color: var(--charcoal);
-            border-color: var(--slate-gray);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-soft);
         }
 
-        h1 {
+        .nav-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.25rem;
+            font-size: 18px;
             font-weight: 700;
-            letter-spacing: -0.025em;
+            letter-spacing: -0.5px;
         }
 
-        main {
+        .nav-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Status Pill */
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--bg-primary);
+            color: var(--slate-gray);
+        }
+
+        .status-success {
+            color: #10b981;
+        }
+
+        .status-error {
+            color: #ef4444;
+        }
+
+        /* Main Layout */
+        .main-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: var(--bg-secondary);
             overflow: hidden;
         }
 
+        /* Editor Area */
         .editor-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-        }
-
-        .editor-header {
-            padding: 0.5rem 2rem;
-            border-bottom: 1px solid var(--border-color);
-            background: #fafafa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .editor-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--slate-gray);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+            background: var(--bg-secondary);
+            position: relative;
         }
 
         .textarea-wrapper {
@@ -131,7 +127,7 @@
             overflow-y: auto;
             display: flex;
             justify-content: center;
-            background: var(--bg-primary); /* Gutters background */
+            background: var(--bg-primary);
             padding: 0;
         }
 
@@ -145,96 +141,110 @@
             border-left: 1px solid var(--border-color);
             border-right: 1px solid var(--border-color);
             resize: none;
-            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-            font-size: 1rem;
+            font-family: 'Fira Code', 'SF Mono', monospace;
+            font-size: 15px;
             line-height: 1.7;
             color: var(--charcoal);
             outline: none;
-            background: var(--bg-secondary); /* Page background */
+            background: var(--bg-secondary);
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.02);
         }
 
+        /* Buttons */
         .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             padding: 10px 20px;
-            border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
-            font-family: 'DM Sans', sans-serif;
             cursor: pointer;
-            transition: var(--transition-smooth);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            white-space: nowrap;
+            transition: var(--transition);
+            border: 1px solid transparent;
         }
 
-        .save-btn {
+        .btn-primary {
             background: var(--charcoal);
             color: white;
-            box-shadow: var(--shadow-soft);
         }
 
-        .save-btn:hover:not(:disabled) {
+        .btn-primary:hover {
             background: #2d3a43;
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-elevated);
+            box-shadow: var(--shadow-md);
         }
 
-        .save-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .save-btn:disabled {
-            opacity: 0.5;
+        .btn-primary:disabled {
+            background: var(--light-gray);
             cursor: not-allowed;
-            background: var(--slate-gray);
-            box-shadow: none;
-            transform: none;
         }
 
-        #status-msg {
-            font-size: 0.875rem;
-            display: none;
-            align-items: center;
-            gap: 0.5rem;
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .status-success {
-            color: #10b981;
+        ::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .status-error {
-            color: #ef4444;
+        ::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
         }
     </style>
 </head>
 <body>
-<header>
-    <div class="header-left">
-        <a href="/" class="back-btn">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15.8333 10H4.16667" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M10 15.8333L4.16667 10L10 4.16667" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+
+<nav class="navbar">
+    <div class="nav-left">
+        <a href="/" class="back-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
             返回
         </a>
-        <h1>AGENTS.md</h1>
+        <div class="nav-title">AGENTS.md</div>
     </div>
-    <div class="header-right">
-        <div id="status-msg"></div>
-        <button id="save-btn" class="btn save-btn">保存更改</button>
+    <div class="nav-actions">
+        <span id="status-msg" class="status-pill" style="display: none;"></span>
+        <button id="save-btn" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            保存修改
+        </button>
     </div>
-</header>
+</nav>
 
-<main>
-    <div class="editor-container">
+<div class="main-container">
+    <main class="editor-container">
         <div class="textarea-wrapper">
             <label for="agent-content"></label>
             <textarea id="agent-content" placeholder="在此输入 Agent 定义 (Markdown 格式)..." spellcheck="false"></textarea>
         </div>
-    </div>
-</main>
+    </main>
+</div>
 
 <script>
     const textarea = document.getElementById('agent-content');
@@ -243,11 +253,13 @@
 
     function showStatus(message, isError = false) {
         statusMsg.textContent = message;
-        statusMsg.className = isError ? 'status-error' : 'status-success';
-        statusMsg.style.display = 'flex';
-        setTimeout(() => {
-            statusMsg.style.display = 'none';
-        }, 3000);
+        statusMsg.className = isError ? 'status-pill status-error' : 'status-pill status-success';
+        statusMsg.style.display = 'block';
+        if (!isError) {
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 3000);
+        }
     }
 
     async function fetchAgents() {
@@ -263,7 +275,8 @@
 
     async function saveAgents() {
         saveBtn.disabled = true;
-        saveBtn.textContent = '保存中...';
+        const originalContent = saveBtn.innerHTML;
+        saveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin"><circle cx="12" cy="12" r="10"></circle></svg> 保存中...`;
         try {
             const response = await fetch('/agents', {
                 method: 'POST',
@@ -274,7 +287,7 @@
             });
 
             if (response.ok) {
-                showStatus('保存成功');
+                showStatus('已保存');
             } else {
                 throw new Error('Save failed');
             }
@@ -283,7 +296,7 @@
             showStatus('保存失败', true);
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = '保存更改';
+            saveBtn.innerHTML = originalContent;
         }
     }
 

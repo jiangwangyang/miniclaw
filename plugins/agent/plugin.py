@@ -17,7 +17,7 @@ async def load_agents():
         agents_file = anyio.Path(agents_file)
         if await agents_file.is_file():
             agents = await agents_file.read_text()
-            logging.info(f"Loaded agents: {json.dumps(agents, ensure_ascii=False)}")
+            logging.info(f"Loaded AGENTS.md: {json.dumps(agents, ensure_ascii=False)}")
             break
 
 
@@ -39,9 +39,9 @@ async def save_agents(content: str = Body(...)):
 async def lifespan(app: FastAPI, **kwargs):
     await load_agents()
     app.include_router(router)
-    logging.info("Agents plugin started")
+    logging.info("Agent plugin started")
     yield
-    logging.info("Agents plugin stopped")
+    logging.info("Agent plugin stopped")
 
 
 async def before_chat(messages: list, **kwargs):

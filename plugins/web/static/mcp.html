@@ -551,7 +551,7 @@
 
     async function fetchSettings() {
         try {
-            const response = await fetch('/settings');
+            const response = await fetch('/setting');
             if (!response.ok) throw new Error('加载设置失败');
             settings = await response.json();
             mcpServers = settings.mcpServers || {};
@@ -565,7 +565,7 @@
     async function saveAllSettings() {
         settings.mcpServers = mcpServers;
         try {
-            const response = await fetch('/settings', {
+            const response = await fetch('/setting', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(JSON.stringify(settings)),

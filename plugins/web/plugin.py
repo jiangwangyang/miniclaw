@@ -39,7 +39,7 @@ async def list_directory(path: str = Query(...)):
     }
 
 
-@router.get("/settings")
+@router.get("/setting")
 async def get_settings():
     settings_file = anyio.Path(SETTINGS_FILE)
     if not await settings_file.exists():
@@ -47,7 +47,7 @@ async def get_settings():
     return json.loads(await settings_file.read_text(encoding="utf-8"))
 
 
-@router.post("/settings")
+@router.post("/setting")
 async def save_settings(content: str = Body(...)):
     content = json.dumps(json.loads(content), ensure_ascii=False, indent=4)
     settings_file = anyio.Path(SETTINGS_FILE)
