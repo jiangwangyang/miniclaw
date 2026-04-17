@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP 管理 - MiniClaw</title>
+    <style>
+        :root {
+            --bg: #fafbfc;
+            --fg: #1a1a2e;
+            --subtle: #6b7280;
+            --border: #e5e7eb;
+            --accent: #1a1a2e;
+            --accent-fg: #ffffff;
+            --surface: #ffffff;
+            --danger: #ef4444;
+            --success: #10b981;
+            --radius: 12px;
+            --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            background-color: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 48px;
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--fg);
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--subtle);
+        }
+
+        .back-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--subtle);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: var(--transition);
+            margin-bottom: 4px;
+        }
+
+        .back-link:hover {
+            color: var(--fg);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--accent-fg);
+        }
+
+        .btn-primary:hover {
+            background-color: #16213e;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-outline {
+            background-color: var(--surface);
+            border-color: var(--border);
+            color: var(--fg);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg);
+            border-color: var(--subtle);
+        }
+
+        .btn-danger {
+            color: var(--danger);
+            border: 1px solid transparent;
+        }
+
+        .btn-danger:hover {
+            background-color: #fef2f2;
+            border-color: #fee2e2;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.8125rem;
+        }
+
+        .server-list {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .server-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .server-card:hover {
+            border-color: var(--subtle);
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .server-main-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .server-name {
+            font-weight: 600;
+            font-size: 1.125rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .server-url {
+            font-size: 0.875rem;
+            color: var(--subtle);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            word-break: break-all;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 100px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .tag-http {
+            background: rgba(30, 64, 175, 0.1);
+            color: #1e40af;
+        }
+
+        .tag-sse {
+            background: rgba(180, 83, 9, 0.1);
+            color: #b45309;
+        }
+
+        .tag-stdio {
+            background: rgba(55, 65, 81, 0.1);
+            color: #374151;
+        }
+
+        .server-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tools-container {
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+            margin-top: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tool-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 12px;
+            background-color: var(--bg);
+            border-radius: 8px;
+            border-left: 3px solid var(--border);
+        }
+
+        .tool-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .tool-desc {
+            font-size: 0.8125rem;
+            color: var(--subtle);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(26, 26, 46, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 24px;
+        }
+
+        .modal {
+            background-color: var(--surface);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 560px;
+            padding: 32px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--fg);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.9375rem;
+            font-family: inherit;
+            transition: var(--transition);
+            background-color: var(--bg);
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(26, 26, 46, 0.1);
+        }
+
+        .headers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .header-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 40px;
+            gap: 8px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        #status-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            background-color: var(--accent);
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 500;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+            transform: translateY(150%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1100;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #status-toast.show {
+            transform: translateY(0);
+        }
+
+        .status-error {
+            background-color: var(--danger) !important;
+        }
+
+        .status-success {
+            background-color: var(--success) !important;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 24px;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            color: var(--subtle);
+            grid-column: 1 / -1;
+            background-color: var(--surface);
+        }
+
+        .loader {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            animation: rotation 0.8s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 24px 16px;
+            }
+
+            .server-list {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <a href="/" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                返回首页
+            </a>
+            <h1>MCP 服务管理</h1>
+            <p class="subtitle">配置和管理您的 Model Context Protocol (MCP) 服务器。</p>
+        </div>
+        <button id="add-server-btn" class="btn btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            添加服务器
+        </button>
+    </header>
+
+    <div id="server-list" class="server-list">
+        <div class="empty-state">
+            <span class="loader"></span>
+            <p style="margin-top: 1rem;">正在加载配置...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="server-modal" class="modal-overlay">
+    <div class="modal">
+        <h2 class="modal-title" id="modal-title">添加 MCP 服务器</h2>
+        <form id="server-form">
+            <div class="form-group">
+                <label for="server-name">服务器名称</label>
+                <input type="text" id="server-name" placeholder="例如：filesystem-server" required spellcheck="false">
+            </div>
+
+            <div class="form-group">
+                <label for="server-type">连接类型</label>
+                <select id="server-type">
+                    <option value="streamable_http">Streamable HTTP</option>
+                    <option value="sse">SSE (Server-Sent Events)</option>
+                    <option value="stdio">Stdio (本地进程)</option>
+                </select>
+            </div>
+
+            <div id="http-fields">
+                <div class="form-group">
+                    <label for="server-url">端点 URL</label>
+                    <input type="url" id="server-url" placeholder="https://api.example.com/mcp" spellcheck="false">
+                </div>
+                <div class="form-group">
+                    <label>自定义请求头 (Headers)</label>
+                    <div id="headers-container" class="headers-list">
+                        <!-- Header rows -->
+                    </div>
+                    <button type="button" id="add-header-btn" class="btn btn-outline btn-sm" style="margin-top: 8px; width: fit-content;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        添加请求头
+                    </button>
+                </div>
+            </div>
+
+            <div id="stdio-fields" style="display: none;">
+                <div class="form-group">
+                    <label for="server-command">运行命令 (Command)</label>
+                    <input type="text" id="server-command" placeholder="npx, python, 等" spellcheck="false">
+                </div>
+                <div class="form-group">
+                    <label for="server-args">参数 (Arguments，逗号分隔)</label>
+                    <input type="text" id="server-args" placeholder="-y, @modelcontextprotocol/server-everything" spellcheck="false">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" id="cancel-btn" class="btn btn-outline">取消</button>
+                <button type="submit" id="confirm-btn" class="btn btn-primary">保存配置</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="status-toast"></div>
+
+<script>
+    let mcpServers = {};
+    let settings = {};
+    let editingKey = null;
+
+    const serverListEl = document.getElementById('server-list');
+    const addServerBtn = document.getElementById('add-server-btn');
+    const statusToast = document.getElementById('status-toast');
+    const serverModal = document.getElementById('server-modal');
+    const serverForm = document.getElementById('server-form');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const serverTypeSelect = document.getElementById('server-type');
+    const httpFields = document.getElementById('http-fields');
+    const stdioFields = document.getElementById('stdio-fields');
+    const headersContainer = document.getElementById('headers-container');
+    const addHeaderBtn = document.getElementById('add-header-btn');
+
+    function createHeaderRow(key = '', value = '') {
+        const row = document.createElement('div');
+        row.className = 'header-row';
+        row.innerHTML = `
+            <input type="text" class="header-key" placeholder="Key" value="${key}" spellcheck="false">
+            <input type="text" class="header-value" placeholder="Value" value="${value}" spellcheck="false">
+            <button type="button" class="btn btn-danger btn-sm remove-header-btn" title="删除">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        `;
+        row.querySelector('.remove-header-btn').addEventListener('click', () => row.remove());
+        headersContainer.appendChild(row);
+    }
+
+    addHeaderBtn.addEventListener('click', () => createHeaderRow());
+
+    function getHeadersFromUI() {
+        const headers = {};
+        const rows = headersContainer.querySelectorAll('.header-row');
+        rows.forEach(row => {
+            const key = row.querySelector('.header-key').value.trim();
+            const value = row.querySelector('.header-value').value.trim();
+            if (key) headers[key] = value;
+        });
+        return Object.keys(headers).length > 0 ? headers : null;
+    }
+
+    function showStatus(message, type = 'info') {
+        statusToast.textContent = message;
+        statusToast.className = '';
+        if (type === 'error') statusToast.classList.add('status-error');
+        if (type === 'success') statusToast.classList.add('status-success');
+        statusToast.classList.add('show');
+
+        setTimeout(() => {
+            statusToast.classList.remove('show');
+        }, 3000);
+    }
+
+    async function fetchSettings() {
+        try {
+            const response = await fetch('/settings');
+            if (!response.ok) throw new Error('加载设置失败');
+            settings = await response.json();
+            mcpServers = settings.mcpServers || {};
+            renderServerList();
+        } catch (error) {
+            console.error(error);
+            showStatus('加载失败', 'error');
+        }
+    }
+
+    async function saveAllSettings() {
+        settings.mcpServers = mcpServers;
+        try {
+            const response = await fetch('/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(JSON.stringify(settings)),
+            });
+
+            if (response.ok) {
+                return true;
+            } else {
+                throw new Error('保存失败');
+            }
+        } catch (error) {
+            showStatus(error.message, 'error');
+            return false;
+        }
+    }
+
+    function renderServerList() {
+        const keys = Object.keys(mcpServers);
+        if (keys.length === 0) {
+            serverListEl.innerHTML = `
+                <div class="empty-state">
+                    <p>尚未配置 MCP 服务器。</p>
+                    <p style="font-size: 0.875rem; margin-top: 0.5rem;">点击“添加服务器”开始配置。</p>
+                </div>
+            `;
+            return;
+        }
+
+        serverListEl.innerHTML = keys.map(key => {
+            const server = mcpServers[key];
+            let typeTag = '';
+            let endpoint = '';
+
+            if (server.type === 'streamable_http') {
+                typeTag = '<span class="tag tag-http">HTTP</span>';
+                endpoint = server.url;
+            } else if (server.type === 'sse') {
+                typeTag = '<span class="tag tag-sse">SSE</span>';
+                endpoint = server.url;
+            } else {
+                typeTag = '<span class="tag tag-stdio">Stdio</span>';
+                endpoint = `${server.command} ${(server.args || []).join(' ')}`;
+            }
+
+            return `
+                <div class="server-card">
+                    <div class="server-header">
+                        <div class="server-main-info">
+                            <div class="server-name">
+                                ${key}
+                                ${typeTag}
+                            </div>
+                            <div class="server-url">${endpoint}</div>
+                        </div>
+                        <div class="server-actions">
+                            <button class="btn btn-outline btn-sm" id="test-btn-${key}" onclick="testConnection('${key}')">
+                                测试连接
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="editServer('${key}')">
+                                编辑
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteServer('${key}')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="tools-${key}" class="tools-container"></div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function editServer(key) {
+        editingKey = key;
+        const server = mcpServers[key];
+        document.getElementById('modal-title').textContent = '编辑服务器';
+        document.getElementById('server-name').value = key;
+        document.getElementById('server-name').disabled = true;
+        serverTypeSelect.value = server.type || 'stdio';
+
+        document.getElementById('server-url').value = server.url || '';
+        document.getElementById('server-command').value = server.command || '';
+        document.getElementById('server-args').value = (server.args || []).join(', ');
+
+        headersContainer.innerHTML = '';
+        if (server.headers) {
+            Object.entries(server.headers).forEach(([k, v]) => createHeaderRow(k, v));
+        }
+
+        toggleFields();
+        serverModal.style.display = 'flex';
+    }
+
+    async function deleteServer(key) {
+        if (confirm(`确定要删除服务器 "${key}" 吗？`)) {
+            delete mcpServers[key];
+            const success = await saveAllSettings();
+            if (success) {
+                renderServerList();
+                showStatus('服务器已移除', 'success');
+            }
+        }
+    }
+
+    function toggleFields() {
+        const type = serverTypeSelect.value;
+        if (type === 'stdio') {
+            httpFields.style.display = 'none';
+            stdioFields.style.display = 'block';
+        } else {
+            httpFields.style.display = 'block';
+            stdioFields.style.display = 'none';
+        }
+    }
+
+    serverTypeSelect.addEventListener('change', toggleFields);
+
+    addServerBtn.addEventListener('click', () => {
+        editingKey = null;
+        document.getElementById('modal-title').textContent = '添加服务器';
+        document.getElementById('server-name').value = '';
+        document.getElementById('server-name').disabled = false;
+        serverForm.reset();
+        headersContainer.innerHTML = '';
+        toggleFields();
+        serverModal.style.display = 'flex';
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        serverModal.style.display = 'none';
+    });
+
+    serverForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const key = document.getElementById('server-name').value.trim();
+        if (!key) return;
+
+        const type = serverTypeSelect.value;
+        const newServer = {type};
+
+        if (type === 'stdio') {
+            newServer.command = document.getElementById('server-command').value.trim();
+            const argsStr = document.getElementById('server-args').value.trim();
+            newServer.args = argsStr ? argsStr.split(',').map(s => s.trim()) : [];
+        } else {
+            newServer.url = document.getElementById('server-url').value.trim();
+            const headers = getHeadersFromUI();
+            if (headers) newServer.headers = headers;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '正在保存...';
+
+        mcpServers[key] = newServer;
+        const success = await saveAllSettings();
+
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '保存配置';
+
+        if (success) {
+            serverModal.style.display = 'none';
+            renderServerList();
+            showStatus('配置已保存', 'success');
+        }
+    });
+
+    async function testConnection(key) {
+        const server = mcpServers[key];
+        const toolsEl = document.getElementById(`tools-${key}`);
+        const testBtn = document.getElementById(`test-btn-${key}`);
+
+        if (toolsEl.style.display === 'flex') {
+            toolsEl.style.display = 'none';
+            return;
+        }
+
+        toolsEl.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--subtle); padding: 8px;">
+                <span class="loader" style="width: 14px; height: 14px; border-width: 2px;"></span>
+                正在连接...
+            </div>
+        `;
+        toolsEl.style.display = 'flex';
+        testBtn.disabled = true;
+
+        try {
+            const response = await fetch('/mcp/tool/list', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(server)
+            });
+
+            if (response.ok) {
+                const tools = await response.json();
+                if (tools.length === 0) {
+                    toolsEl.innerHTML = '<div style="font-size: 0.875rem; color: var(--subtle); padding: 8px;">连接成功，但未发现可用工具。</div>';
+                } else {
+                    toolsEl.innerHTML = `
+                        <div style="font-size: 0.75rem; font-weight: 700; color: var(--subtle); text-transform: uppercase; margin-bottom: 4px;">可用工具 (${tools.length})</div>
+                        ${tools.map(t => `
+                            <div class="tool-item">
+                                <div class="tool-name">${t.name}</div>
+                                <div class="tool-desc">${t.description || '无描述'}</div>
+                            </div>
+                        `).join('')}
+                    `;
+                }
+            } else {
+                const err = await response.text();
+                toolsEl.innerHTML = `<div style="font-size: 0.875rem; color: var(--danger); padding: 8px;">连接失败: ${err}</div>`;
+            }
+        } catch (error) {
+            toolsEl.innerHTML = `<div style="font-size: 0.875rem; color: var(--danger); padding: 8px;">请求错误: ${error.message}</div>`;
+        } finally {
+            testBtn.disabled = false;
+        }
+    }
+
+    fetchSettings();
+</script>
+</body>
+</html>

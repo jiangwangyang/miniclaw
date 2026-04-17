@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager, AsyncExitStack
 
 import anyio
+from fastapi import APIRouter, FastAPI, Body
 from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
@@ -12,6 +13,26 @@ SETTINGS_FILE = "settings.json"
 tool_session_dict: dict[str, ClientSession] = {}
 mcp_tools: list[Tool] = []
 mcp_openai_tools: list[dict] = []
+router: APIRouter = APIRouter()
+
+
+@router.post("/mcp/tool/list")
+async def get_mcp_tools(body: dict = Body(...)):
+    proto_type = body.get("type")
+    async with AsyncExitStack() as stack:
+        if proto_type == "streamable_http":
+            transport = await stack.enter_async_context(streamablehttp_client(body["url"], body.get("headers")))
+        elif proto_type == "sse":
+            transport = await stack.enter_async_context(sse_client(body["url"], body.get("headers")))
+        elif proto_type == "stdio":
+            transport = await stack.enter_async_context(stdio_client(StdioServerParameters(command=body["command"], args=body["args"])))
+        else:
+            raise ValueError(f"Unknown proto type: {proto_type}")
+        read, write = transport[:2]
+        session = await stack.enter_async_context(ClientSession(read, write))
+        await session.initialize()
+        tools_resp = await session.list_tools()
+        return [dict(tool) for tool in tools_resp.tools]
 
 
 @asynccontextmanager
@@ -50,7 +71,8 @@ async def register_mcp_client(name, proto_type, **kwargs):
 
 
 @asynccontextmanager
-async def lifespan(tools: list, **kwargs):
+async def lifespan(app: FastAPI, tools: list, **kwargs):
+    app.include_router(router)
     async with AsyncExitStack() as stack:
         # 加载设置
         settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
@@ -62,8 +84,10 @@ async def lifespan(tools: list, **kwargs):
                     await stack.enter_async_context(register_mcp_client(name, "streamable_http", url=server.get("url"), headers=server.get("headers")))
                 elif server.get("type") == "sse":
                     await stack.enter_async_context(register_mcp_client(name, "sse", url=server.get("url"), headers=server.get("headers")))
-                else:
+                elif server.get("type") == "stdio":
                     await stack.enter_async_context(register_mcp_client(name, "stdio", command=server.get("command"), args=server.get("args")))
+                else:
+                    logging.warning(f"Unknown MCP server type: {server.get('type')}")
             except Exception as e:
                 logging.error(f"Error registering {name}: {e}")
         # 添加MCP工具
