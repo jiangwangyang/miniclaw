@@ -958,18 +958,18 @@
                 </svg>
                 定时任务
             </a>
-            <a class="header-nav-btn" href="/static/skill.html">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                </svg>
-                技能管理
-            </a>
             <a class="header-nav-btn" href="/static/mcp.html">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="16 18 22 12 16 6"></polyline>
                     <polyline points="8 6 2 12 8 18"></polyline>
                 </svg>
                 MCP管理
+            </a>
+            <a class="header-nav-btn" href="/static/skill.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                技能管理
             </a>
             <a class="header-nav-btn" href="/static/agents.html">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1304,16 +1304,16 @@
             if (data.messages && data.messages.length > 0) {
                 data.messages.forEach(msg => {
                     if (msg.role === 'user') {
-                        addMessage(msg.content, 'user');
+                        addMessage(msg.content, 'user', msg.time);
                     } else if (msg.role === 'assistant') {
                         if (msg.content) {
-                            addMessage(msg.content, 'assistant');
+                            addMessage(msg.content, 'assistant', msg.time);
                         }
                         if (msg.tool_calls) {
                             for (let i = 0; i < msg.tool_calls.length; i++) {
                                 const tool_name = msg.tool_calls[i].function.name;
                                 const arguments = msg.tool_calls[i].function.arguments;
-                                addMessage(`${tool_name} ${arguments.slice(0, 100)}`, 'tool');
+                                addMessage(`${tool_name} ${arguments.slice(0, 100)}`, 'tool', msg.time);
                             }
                         }
                     }
@@ -1338,7 +1338,7 @@
             });
         } catch (error) {
             console.error('加载会话失败:', error);
-            addMessage('加载会话失败: ' + error.message, 'assistant');
+            addMessage('加载会话失败: ' + error.message, 'assistant', getCurrentTime());
         }
     }
 
@@ -1351,7 +1351,13 @@
 
     function getCurrentTime() {
         const now = new Date();
-        return now.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始，+1后补零
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
 
     /**
@@ -1359,7 +1365,7 @@
      * @param {string} content - 消息内容
      * @param {string} type - 消息类型: 'user' | 'assistant' | 'tool'
      */
-    function addMessage(content, type) {
+    function addMessage(content, type, time) {
         // 去除前后多余的空白字符
         content = content.trim();
         // 隐藏空状态
@@ -1376,7 +1382,7 @@
 
         messageDiv.innerHTML = `
             ${formattedContent}
-            <div class="message-time">${getCurrentTime()}</div>
+            <div class="message-time">${time}</div>
         `;
         chatContainer.appendChild(messageDiv);
         scrollToBottom();
@@ -1436,7 +1442,7 @@
         if (!message || isTyping || !currentSessionId) return;
 
         // 添加用户消息
-        addMessage(message, 'user');
+        addMessage(message, 'user', getCurrentTime());
         messageInput.value = '';
         autoResize();
 
@@ -1480,7 +1486,7 @@
                         for (let i = 0; i < data.tool_calls.length; i++) {
                             const tool_name = data.tool_calls[i].function.name;
                             const arguments = data.tool_calls[i].function.arguments;
-                            addMessage(`${tool_name} ${arguments.slice(0, 100)}`, 'tool');
+                            addMessage(`${tool_name} ${arguments.slice(0, 100)}`, 'tool', getCurrentTime());
                         }
                         assistantMessage = '';
                         messageDiv = null;
@@ -1495,12 +1501,12 @@
                 currentEventSource = null;
                 setTyping(false);
                 if (!assistantMessage) {
-                    addMessage('抱歉，我没有收到响应。', 'assistant');
+                    addMessage('抱歉，我没有收到响应。', 'assistant', getCurrentTime());
                 }
             };
         } catch (error) {
             setTyping(false);
-            addMessage('抱歉，发生了错误：' + error.message, 'assistant');
+            addMessage('抱歉，发生了错误：' + error.message, 'assistant', getCurrentTime());
         }
     }
 </script>

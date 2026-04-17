@@ -49,7 +49,7 @@ async def get_settings():
 
 @router.post("/settings")
 async def save_settings(content: str = Body(...)):
-    json.loads(content)
+    content = json.dumps(json.loads(content), ensure_ascii=False, indent=4)
     settings_file = anyio.Path(SETTINGS_FILE)
     await settings_file.write_text(content, encoding="utf-8")
 
