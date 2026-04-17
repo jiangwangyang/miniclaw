@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
+            /* Consistent with chat.html */
             --charcoal: #36454f;
             --slate-gray: #708090;
             --light-gray: #d3d3d3;
@@ -16,11 +17,14 @@
             --bg-primary: #f8f9fa;
             --bg-secondary: #ffffff;
             --border-color: #e5e7eb;
-            --accent-color: #3b82f6;
-            --accent-hover: #2563eb;
             --shadow-soft: 0 2px 8px rgba(54, 69, 79, 0.08);
             --shadow-elevated: 0 4px 20px rgba(54, 69, 79, 0.12);
             --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-primary: #36454f;
+            --text-secondary: #708090;
         }
 
         * {
@@ -32,22 +36,22 @@
         body {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-primary);
-            color: var(--charcoal);
+            color: var(--text-primary);
             line-height: 1.5;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
         }
 
         header {
             background: var(--bg-secondary);
-            padding: 0.75rem 2rem;
+            padding: 18px 28px;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: var(--shadow-soft);
+            position: sticky;
+            top: 0;
             z-index: 10;
         }
 
@@ -60,7 +64,7 @@
         .header-right {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1rem;
         }
 
         .back-btn {
@@ -71,7 +75,7 @@
             border-radius: 12px;
             background: transparent;
             border: 1px solid var(--border-color);
-            color: var(--slate-gray);
+            color: var(--text-secondary);
             text-decoration: none;
             font-size: 14px;
             font-weight: 600;
@@ -80,7 +84,7 @@
 
         .back-btn:hover {
             background: var(--bg-primary);
-            color: var(--charcoal);
+            color: var(--text-primary);
             border-color: var(--slate-gray);
             transform: translateY(-1px);
             box-shadow: var(--shadow-soft);
@@ -95,61 +99,83 @@
 
         main {
             flex: 1;
-            display: flex;
-            flex-direction: column;
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .settings-card {
             background: var(--bg-secondary);
-            overflow: hidden;
+            border-radius: 20px;
+            padding: 2.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-soft);
         }
 
-        .editor-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .textarea-wrapper {
-            flex: 1;
-            width: 100%;
-            overflow-y: auto;
-            display: flex;
-            justify-content: center;
-            background: var(--bg-primary);
-            padding: 0;
-        }
-
-        textarea {
-            width: 100%;
-            max-width: 900px;
-            height: 100%;
-            min-height: 100%;
-            padding: 2rem 3rem;
-            border: none;
-            border-left: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
-            resize: none;
-            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-            font-size: 0.95rem;
-            line-height: 1.6;
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
             color: var(--charcoal);
+            letter-spacing: -0.025em;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--charcoal);
+        }
+
+        .form-group .description {
+            font-size: 0.875rem;
+            color: var(--slate-gray);
+            margin-bottom: 0.75rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: var(--transition-smooth);
+            background: var(--bg-primary);
+            color: var(--charcoal);
+        }
+
+        .form-group input:focus {
             outline: none;
+            border-color: var(--charcoal);
+            box-shadow: 0 0 0 4px rgba(54, 69, 79, 0.08);
             background: var(--bg-secondary);
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.02);
+        }
+
+        .form-group input::placeholder {
+            color: var(--slate-gray);
+            opacity: 0.5;
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
             border-radius: 12px;
             font-size: 14px;
             font-weight: 600;
-            font-family: 'DM Sans', sans-serif;
             cursor: pointer;
             transition: var(--transition-smooth);
             display: flex;
             align-items: center;
-            gap: 6px;
-            white-space: nowrap;
+            gap: 8px;
+            font-family: 'DM Sans', sans-serif;
         }
 
         .save-btn {
@@ -160,20 +186,14 @@
 
         .save-btn:hover:not(:disabled) {
             background: #2d3a43;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
             box-shadow: var(--shadow-elevated);
         }
 
-        .save-btn:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
         .save-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.6;
             cursor: not-allowed;
             background: var(--slate-gray);
-            box-shadow: none;
-            transform: none;
         }
 
         #status-msg {
@@ -181,8 +201,8 @@
             display: none;
             align-items: center;
             gap: 0.5rem;
-            padding: 4px 12px;
-            border-radius: 8px;
+            padding: 8px 16px;
+            border-radius: 10px;
         }
 
         .status-success {
@@ -193,6 +213,51 @@
         .status-error {
             color: #ef4444;
             background: rgba(239, 68, 68, 0.1);
+        }
+
+        .advanced-toggle {
+            margin-top: 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+
+        .advanced-toggle button {
+            background: none;
+            border: none;
+            color: var(--slate-gray);
+            font-size: 0.875rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition-smooth);
+        }
+
+        .advanced-toggle button:hover {
+            color: var(--charcoal);
+        }
+
+        #advanced-editor {
+            display: none;
+            margin-top: 1.5rem;
+        }
+
+        #advanced-editor textarea {
+            width: 100%;
+            height: 300px;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            resize: vertical;
+            background: var(--bg-primary);
+            color: var(--charcoal);
+            outline: none;
+        }
+
+        #advanced-editor textarea:focus {
+            border-color: var(--charcoal);
+            background: var(--bg-secondary);
         }
     </style>
 </head>
@@ -206,27 +271,66 @@
             </svg>
             返回
         </a>
-        <h1>settings.json</h1>
+        <h1>系统设置</h1>
     </div>
     <div class="header-right">
         <div id="status-msg"></div>
-        <button id="save-btn" class="btn save-btn">保存设置</button>
+        <button id="save-btn" class="btn save-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            保存设置
+        </button>
     </div>
 </header>
 
 <main>
-    <div class="editor-container">
-        <div class="textarea-wrapper">
-            <label for="settings-content"></label>
-            <textarea id="settings-content" placeholder="在此输入 JSON 格式的配置..." spellcheck="false"></textarea>
+    <div class="settings-card">
+        <h2 class="section-title">API 配置</h2>
+
+        <div class="form-group">
+            <label for="base_url">Base URL</label>
+            <p class="description">API 的基础请求地址，定义模型服务的访问入口。</p>
+            <input type="text" id="base_url" placeholder="https://api.openai.com/v1" spellcheck="false">
+        </div>
+
+        <div class="form-group">
+            <label for="api_key">API Key</label>
+            <p class="description">用于身份验证的密钥，请妥善保管。</p>
+            <input type="password" id="api_key" placeholder="在此输入您的 API 密钥" spellcheck="false">
+        </div>
+
+        <div class="form-group">
+            <label for="model">模型名称</label>
+            <p class="description">指定要使用的模型标识符（如 gpt-4o, claude-3-5-sonnet 等）。</p>
+            <input type="text" id="model" placeholder="model-name" spellcheck="false">
+        </div>
+
+        <div class="advanced-toggle">
+            <button id="toggle-advanced">显示高级 JSON 编辑器</button>
+        </div>
+
+        <div id="advanced-editor">
+            <div class="form-group">
+                <label for="settings-json">原始 JSON</label>
+                <p class="description">高级配置项，直接编辑 settings.json 的内容。修改后需切换回此视图以确保同步。</p>
+                <textarea id="settings-json" spellcheck="false"></textarea>
+            </div>
         </div>
     </div>
 </main>
 
 <script>
-    const textarea = document.getElementById('settings-content');
+    let originalSettings = {};
     const saveBtn = document.getElementById('save-btn');
     const statusMsg = document.getElementById('status-msg');
+    const toggleAdvancedBtn = document.getElementById('toggle-advanced');
+    const advancedEditor = document.getElementById('advanced-editor');
+    const jsonTextarea = document.getElementById('settings-json');
+
+    const fields = ['base_url', 'api_key', 'model'];
 
     function showStatus(message, isError = false) {
         statusMsg.textContent = message;
@@ -244,59 +348,118 @@
             const response = await fetch('/settings');
             if (!response.ok) {
                 if (response.status === 404) {
-                    textarea.value = '{}';
+                    originalSettings = {};
                     return;
                 }
-                throw new Error('Failed to fetch');
+                throw new Error('无法加载设置');
             }
-            const data = await response.json();
-            textarea.value = JSON.stringify(data, null, 2);
+            originalSettings = await response.json();
+
+            // Populate basic fields
+            fields.forEach(field => {
+                const input = document.getElementById(field);
+                if (input) {
+                    input.value = originalSettings[field] || '';
+                }
+            });
+
+            // Populate advanced editor
+            jsonTextarea.value = JSON.stringify(originalSettings, null, 2);
         } catch (error) {
             console.error('Failed to fetch settings:', error);
-            showStatus('加载失败', true);
+            showStatus('加载设置失败', true);
         }
     }
 
     async function saveSettings() {
-        const content = textarea.value.trim();
+        let settingsToSave = {...originalSettings};
 
-        // Validate JSON
-        try {
-            JSON.parse(content);
-        } catch (e) {
-            showStatus('JSON 格式不正确: ' + e.message, true);
-            return;
+        // Always sync basic fields to the object
+        fields.forEach(field => {
+            const input = document.getElementById(field);
+            if (input) {
+                settingsToSave[field] = input.value.trim();
+            }
+        });
+
+        // If user is in advanced mode, take the JSON directly
+        if (advancedEditor.style.display === 'block') {
+            try {
+                settingsToSave = JSON.parse(jsonTextarea.value);
+            } catch (e) {
+                showStatus('JSON 格式不正确: ' + e.message, true);
+                return;
+            }
         }
 
         saveBtn.disabled = true;
-        saveBtn.textContent = '保存中...';
+        const originalBtnText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span>保存中...</span>';
+
         try {
             const response = await fetch('/settings', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(content),
+                body: JSON.stringify(JSON.stringify(settingsToSave)),
             });
 
             if (response.ok) {
-                showStatus('保存成功');
+                showStatus('设置已保存');
+                originalSettings = settingsToSave;
+                jsonTextarea.value = JSON.stringify(originalSettings, null, 2);
+
+                // Update basic fields if they were changed in JSON mode
+                fields.forEach(field => {
+                    const input = document.getElementById(field);
+                    if (input) {
+                        input.value = originalSettings[field] || '';
+                    }
+                });
             } else {
                 const errData = await response.json();
-                throw new Error(errData.detail || 'Save failed');
+                throw new Error(errData.detail || '保存失败');
             }
         } catch (error) {
             console.error('Failed to save settings:', error);
             showStatus('保存失败: ' + error.message, true);
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = '保存设置';
+            saveBtn.innerHTML = originalBtnText;
         }
     }
 
+    toggleAdvancedBtn.addEventListener('click', () => {
+        if (advancedEditor.style.display === 'none' || advancedEditor.style.display === '') {
+            advancedEditor.style.display = 'block';
+            toggleAdvancedBtn.textContent = '隐藏高级 JSON 编辑器';
+            // Sync form to JSON before showing
+            const current = {...originalSettings};
+            fields.forEach(field => {
+                current[field] = document.getElementById(field).value.trim();
+            });
+            jsonTextarea.value = JSON.stringify(current, null, 2);
+        } else {
+            // Sync JSON back to form if valid
+            try {
+                const current = JSON.parse(jsonTextarea.value);
+                fields.forEach(field => {
+                    const input = document.getElementById(field);
+                    if (input && current[field] !== undefined) {
+                        input.value = current[field];
+                    }
+                });
+            } catch (e) {
+                // Ignore invalid JSON on hide
+            }
+            advancedEditor.style.display = 'none';
+            toggleAdvancedBtn.textContent = '显示高级 JSON 编辑器';
+        }
+    });
+
     saveBtn.addEventListener('click', saveSettings);
 
-    // Shortcut: Cmd/Ctrl + S to save
     document.addEventListener('keydown', (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key === 's') {
             e.preventDefault();
@@ -304,18 +467,6 @@
         }
     });
 
-    // Tab support in textarea
-    textarea.addEventListener('keydown', function (e) {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const start = this.selectionStart;
-            const end = this.selectionEnd;
-            this.value = this.value.substring(0, start) + "  " + this.value.substring(end);
-            this.selectionStart = this.selectionEnd = start + 2;
-        }
-    });
-
-    // Initial fetch
     fetchSettings();
 </script>
 </body>
