@@ -34,7 +34,12 @@ class TaskEntity(BaseModel):
 
 
 async def execute_task(task_id: str, name: str, content: str):
-    response = await async_client.post(f"{CHAT_URL}?id={task_id}&message={content}")
+    url = f"{CHAT_URL}/{task_id}"
+    body = {
+        "message": content,
+        "workdir": "/tmp"
+    }
+    response = await async_client.post(url, json=body)
     response.raise_for_status()
     async for _ in response.aiter_lines():
         pass

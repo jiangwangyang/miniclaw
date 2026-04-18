@@ -52,7 +52,12 @@ def message_consumer():
             open_id = feishu_message.event.sender.sender_id.open_id
             user_content = feishu_message.event.message.content
             # 发送到模型
-            response = requests.post(f"{CHAT_URL}?id={open_id}&message={user_content}", stream=True)
+            url = f"{CHAT_URL}/{open_id}"
+            body = {
+                "message": user_content,
+                "workdir": "/tmp"
+            }
+            response = requests.post(url, json=body, stream=True)
             response.raise_for_status()
             # 遍历模型返回
             text = ""
