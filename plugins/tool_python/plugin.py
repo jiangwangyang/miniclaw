@@ -32,11 +32,14 @@ async def execute_python_code(code: str, work_dir: str) -> str:
 
 
 @asynccontextmanager
-async def lifespan(tools: list, **kwargs):
-    tools.append(PYTHON_TOOL)
-    logging.info(f"Python tool plugin started, adding python tool: {json.dumps(PYTHON_TOOL, ensure_ascii=False)}")
+async def lifespan(**kwargs):
+    logging.info(f"Python tool plugin started, having python tool: {json.dumps(PYTHON_TOOL, ensure_ascii=False)}")
     yield
     logging.info("Python tool plugin stopped")
+
+
+async def before_chat(tools: list, **kwargs):
+    tools.append(PYTHON_TOOL)
 
 
 async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):

@@ -32,15 +32,18 @@ async def shell(command: str, work_dir: str) -> str:
 
 
 @asynccontextmanager
-async def lifespan(tools: list, **kwargs):
+async def lifespan(**kwargs):
     if sys.platform.startswith("win"):
         logging.info("Shell tool plugin not supported on Windows")
-        yield
-    else:
+        return
+    logging.info(f"Shell tool plugin started, having shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
+    yield
+    logging.info("Shell tool plugin stopped")
+
+
+async def before_chat(tools: list, **kwargs):
+    if not sys.platform.startswith("win"):
         tools.append(SHELL_TOOL)
-        logging.info(f"Shell tool plugin started, adding shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
-        yield
-        logging.info("Shell tool plugin stopped")
 
 
 async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):

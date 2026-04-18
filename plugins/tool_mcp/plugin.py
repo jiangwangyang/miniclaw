@@ -71,7 +71,7 @@ async def register_mcp_client(name, proto_type, **kwargs):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI, tools: list, **kwargs):
+async def lifespan(app: FastAPI, **kwargs):
     # 注册路由
     app.include_router(router)
     # 加载设置
@@ -96,13 +96,15 @@ async def lifespan(app: FastAPI, tools: list, **kwargs):
                     logging.warning(f"Unknown MCP server type: {server.get('type')}")
             except Exception as e:
                 logging.error(f"Error registering {name}: {e}")
-        # 添加MCP工具
-        tools.extend(mcp_openai_tools)
-        logging.info(f"MCP plugin started, adding {len(mcp_openai_tools)} MCP tools: {json.dumps(mcp_openai_tools)}")
+        logging.info(f"MCP plugin started, having {len(mcp_openai_tools)} MCP tools: {json.dumps(mcp_openai_tools)}")
         # 等待
         yield
         # 结束
         logging.info("MCP plugin stopped")
+
+
+async def before_chat(tools: list, **kwargs):
+    tools.extend(mcp_openai_tools)
 
 
 # 执行工具

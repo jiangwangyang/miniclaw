@@ -19,17 +19,8 @@ logging.basicConfig(
 DATA_DIR = "data"
 SETTINGS_FILE = "data/settings.json"
 PLUGINS_DIR_LIST = ["external_plugins/", "plugins/"]
-session_flag: dict[str, bool] = {}
 plugins: list[object] = []
-tools: list[object] = []
-
-
-# 加载设置
-async def load_settings() -> dict[str, object]:
-    if not await anyio.Path(SETTINGS_FILE).exists():
-        return {}
-    content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
-    return json.loads(content)
+session_flag: dict[str, bool] = {}
 
 
 # 加载插件
@@ -78,21 +69,24 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
         {"role": "system", "content": ""},
         {"role": "user", "content": user_content}
     ]
+    tools = []
     # before_chat
-    await execute_plugins(action="before_chat", session_id=session_id, messages=messages, user_content=user_content, work_dir=work_dir)
+    await execute_plugins(action="before_chat", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, user_content=user_content)
 
     while True:
         if not session_flag.get(session_id, False):
             break
 
         # 1. 发送请求
-        settings = await load_settings()
+        settings = {}
+        if await anyio.Path(SETTINGS_FILE).exists():
+            settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8"))
         client = AsyncOpenAI(base_url=settings.get("base_url"), api_key=settings.get("api_key"))
         response = await client.chat.completions.create(model=settings.get("model"), messages=messages, tools=tools, stream=True)
 
         # 2. 收集内容
         # before model
-        await execute_plugins(action="before_model", session_id=session_id, messages=messages)
+        await execute_plugins(action="before_model", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools)
         assistant_content = ""
         assistant_tool_calls = []
         async for chunk in response:
@@ -116,25 +110,25 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
         yield f"data: {json.dumps({"role": "assistant", "content": "", "tool_calls": assistant_tool_calls}, ensure_ascii=False)}\n\n"
         messages.append({"role": "assistant", "content": assistant_content, "tool_calls": assistant_tool_calls})
         # after model
-        await execute_plugins(action="after_model", session_id=session_id, messages=messages)
+        await execute_plugins(action="after_model", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools)
 
         # 3. 工具调用
         for tool_call in assistant_tool_calls:
             # before tool
-            await execute_plugins(action="before_tool", session_id=session_id, messages=messages, tool_call=tool_call, work_dir=work_dir)
+            await execute_plugins(action="before_tool", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, tool_call=tool_call)
             # yield tool
             if messages[-1]["role"] != "tool" or messages[-1]["tool_call_id"] != tool_call["id"]:
                 messages.append({"role": "tool", "tool_call_id": tool_call["id"], "content": "Can't find tool"})
             yield f"data: {json.dumps(messages[-1], ensure_ascii=False)}\n\n"
             # after tool
-            await execute_plugins(action="after_tool", session_id=session_id, messages=messages, tool_call=tool_call, work_dir=work_dir)
+            await execute_plugins(action="after_tool", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, tool_call=tool_call)
 
         # 4. 判断结束
         if not assistant_tool_calls:
             break
 
     # after chat
-    await execute_plugins(action="after_chat", session_id=session_id, messages=messages, user_content=user_content, assistant_content=assistant_content, work_dir=work_dir)
+    await execute_plugins(action="after_chat", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, user_content=user_content, assistant_content=assistant_content)
     # session end
     if session_id in session_flag:
         del session_flag[session_id]
@@ -149,7 +143,7 @@ async def lifespan(_app: FastAPI):
         for module in plugins:
             if hasattr(module, "lifespan"):
                 try:
-                    await stack.enter_async_context(module.lifespan(app=_app, tools=tools))
+                    await stack.enter_async_context(module.lifespan(app=_app))
                 except Exception as e:
                     logging.error(f"执行插件 {module.__name__} 的 lifespan 钩子函数失败: {e}", e)
         yield
