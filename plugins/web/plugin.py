@@ -8,7 +8,8 @@ from fastapi import FastAPI, APIRouter, HTTPException, Query, Body
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
-SETTINGS_FILE = "settings.json"
+DATA_DIR = "data"
+SETTINGS_FILE = "data/settings.json"
 STATIC_DIR = str(pathlib.Path(__file__).parent / "static")
 router = APIRouter()
 
@@ -41,17 +42,18 @@ async def list_directory(path: str = Query(...)):
 
 @router.get("/setting")
 async def get_settings():
-    settings_file = anyio.Path(SETTINGS_FILE)
-    if not await settings_file.exists():
-        raise HTTPException(status_code=404, detail="Settings file not found")
-    return json.loads(await settings_file.read_text(encoding="utf-8"))
+    await anyio.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
+    if not await anyio.Path(SETTINGS_FILE).exists():
+        await anyio.Path(SETTINGS_FILE).write_text("{}", encoding="utf-8")
+    content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+    return json.loads(content)
 
 
 @router.post("/setting")
 async def save_settings(content: str = Body(...)):
+    await anyio.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
     content = json.dumps(json.loads(content), ensure_ascii=False, indent=4)
-    settings_file = anyio.Path(SETTINGS_FILE)
-    await settings_file.write_text(content, encoding="utf-8")
+    await anyio.Path(SETTINGS_FILE).write_text(content, encoding="utf-8")
 
 
 @asynccontextmanager

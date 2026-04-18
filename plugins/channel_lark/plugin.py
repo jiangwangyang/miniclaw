@@ -11,7 +11,7 @@ import lark_oapi as lark
 import requests
 from lark_oapi.api.im.v1 import *
 
-SETTINGS_FILE = "settings.json"
+SETTINGS_FILE = "data/settings.json"
 CHAT_URL = "http://localhost:11223/chat"
 INTERRUPT_URL = "http://localhost:11223/interrupt"
 message_queue = queue.Queue(maxsize=10)
@@ -99,8 +99,11 @@ def event_listener():
 @asynccontextmanager
 async def lifespan(**kwargs):
     global lark_app_id, lark_app_secret
-    settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
-    settings = json.loads(settings_content)
+    if await anyio.Path(SETTINGS_FILE).exists():
+        settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+        settings = json.loads(settings_content)
+    else:
+        settings = {}
     lark_app_id, lark_app_secret = settings.get("lark_app_id", ""), settings.get("lark_app_secret", "")
     if not lark_app_id or not lark_app_secret:
         return

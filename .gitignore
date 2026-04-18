@@ -207,4 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 data/
-settings.json
+external_plugins/
+external_skills/
+AGENTS.md

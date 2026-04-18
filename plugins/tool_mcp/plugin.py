@@ -9,7 +9,7 @@ from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
-SETTINGS_FILE = "settings.json"
+SETTINGS_FILE = "data/settings.json"
 tool_session_dict: dict[str, ClientSession] = {}
 mcp_tools: list[Tool] = []
 mcp_openai_tools: list[dict] = []
@@ -72,13 +72,19 @@ async def register_mcp_client(name, proto_type, **kwargs):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI, tools: list, **kwargs):
+    # 注册路由
     app.include_router(router)
-    async with AsyncExitStack() as stack:
-        # 加载设置
+    # 加载设置
+    if await anyio.Path(SETTINGS_FILE).exists():
         settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
         settings = json.loads(settings_content)
+    else:
+        settings = {}
+    mcp_servers = settings.get("mcpServers") or {}
+    # 注册MCP客户端
+    async with AsyncExitStack() as stack:
         # 创建MCP客户端
-        for name, server in (settings.get("mcpServers") or {}).items():
+        for name, server in mcp_servers.items():
             try:
                 if server.get("type") == "streamable_http":
                     await stack.enter_async_context(register_mcp_client(name, "streamable_http", url=server.get("url"), headers=server.get("headers")))

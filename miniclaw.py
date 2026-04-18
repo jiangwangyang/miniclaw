@@ -5,6 +5,7 @@ import os
 import sys
 from contextlib import asynccontextmanager, AsyncExitStack
 
+import anyio
 from fastapi import FastAPI, Path, Body, Query
 from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI
@@ -15,26 +16,20 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-SETTINGS_FILE = "settings.json"
-PLUGINS_DIR_LIST = ["plugins/", "external_plugins/", os.path.expanduser("~/.miniclaw/plugins/")]
-client: AsyncOpenAI
+DATA_DIR = "data"
+SETTINGS_FILE = "data/settings.json"
+PLUGINS_DIR_LIST = ["external_plugins/", "plugins/"]
 session_flag: dict[str, bool] = {}
-settings: dict[str, object] = {}
 plugins: list[object] = []
 tools: list[object] = []
 
 
 # 加载设置
-async def load_settings():
-    global settings
-    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-        settings = json.load(f)
-    if not settings.get("base_url"):
-        raise ValueError("base_url is required")
-    if not settings.get("api_key"):
-        raise ValueError("api_key is required")
-    if not settings.get("model"):
-        raise ValueError("model is required")
+async def load_settings() -> dict[str, object]:
+    if not await anyio.Path(SETTINGS_FILE).exists():
+        return {}
+    content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+    return json.loads(content)
 
 
 # 加载插件
@@ -91,7 +86,9 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
             break
 
         # 1. 发送请求
-        response = await client.chat.completions.create(model=settings["model"], messages=messages, tools=tools, stream=True)
+        settings = await load_settings()
+        client = AsyncOpenAI(base_url=settings.get("base_url"), api_key=settings.get("api_key"))
+        response = await client.chat.completions.create(model=settings.get("model"), messages=messages, tools=tools, stream=True)
 
         # 2. 收集内容
         # before model
@@ -147,10 +144,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    global client
-    await load_settings()
     await load_plugins()
-    client = AsyncOpenAI(base_url=settings["base_url"], api_key=settings["api_key"])
     async with AsyncExitStack() as stack:
         for module in plugins:
             if hasattr(module, "lifespan"):
