@@ -55,27 +55,14 @@ def message_consumer():
             url = f"{CHAT_URL}/{open_id}"
             body = {
                 "message": user_content,
-                "workdir": "/tmp"
+                "workdir": "/tmp",
+                "stream": False
             }
             response = requests.post(url, json=body, stream=True)
             response.raise_for_status()
-            # 遍历模型返回
-            text = ""
-            for line in response.iter_lines():
-                line = line.decode("utf-8").strip() if line else ""
-                if not line.startswith("data:"):
-                    continue
-                line = line[5:].strip()
-                if line == "[DONE]":
-                    break
-                data = json.loads(line)
-                if not data["role"] == "assistant":
-                    continue
-                text += data["content"]
-                if data["content"] == "" and text:
-                    # 发送飞书消息
-                    send_feishu_message(open_id, text)
-                    text = ""
+            # 回复飞书消息
+            text = response.json().get("content")
+            send_feishu_message(open_id, text)
             # 处理完成
             message_queue.task_done()
         except queue.Empty:
@@ -87,7 +74,7 @@ def event_listener():
     def do_p2_im_message_receive_v1(data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         logging.info(lark.JSON.marshal(data))
         open_id = data.event.sender.sender_id.open_id
-        response = requests.post(f"{INTERRUPT_URL}?id={open_id}")
+        response = requests.post(f"{INTERRUPT_URL}/{open_id}")
         response.raise_for_status()
         message_queue.put(data)
 

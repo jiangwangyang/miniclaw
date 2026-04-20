@@ -19,13 +19,13 @@ logging.basicConfig(
 DATA_DIR = "data"
 SETTINGS_FILE = "data/settings.json"
 PLUGINS_DIR_LIST = ["external_plugins/", "plugins/"]
-plugins: list[object] = []
-session_flag: dict[str, bool] = {}
+PLUGINS: list[object] = []
+SESSIONS: set[str] = set()
 
 
 # 加载插件
 async def load_plugins():
-    plugins.clear()
+    PLUGINS.clear()
     loaded_plugin_names = set()
     # 遍历插件目录
     for plugins_dir in PLUGINS_DIR_LIST:
@@ -42,16 +42,16 @@ async def load_plugins():
                 module_name = f"{entry}.plugin"
                 try:
                     module = importlib.import_module(module_name)
-                    plugins.append(module)
+                    PLUGINS.append(module)
                     loaded_plugin_names.add(entry)
                 except Exception as e:
                     logging.error(f"加载插件 {entry} 失败: {e}")
-    logging.info(f"Loaded {len(plugins)} plugins: {plugins}")
+    logging.info(f"Loaded {len(PLUGINS)} plugins: {PLUGINS}")
 
 
 # 执行插件钩子函数
 async def execute_plugins(action: str, **kwargs):
-    for module in plugins:
+    for module in PLUGINS:
         action_function = getattr(module, action, None)
         if action_function:
             try:
@@ -61,20 +61,15 @@ async def execute_plugins(action: str, **kwargs):
 
 
 # 模型对话
-async def chat_generator(session_id: str, user_content: str, work_dir: str):
+async def chat_generator(session_id: str, messages: list, tools: list, user_content: str, work_dir: str):
     # session start
-    session_flag[session_id] = True
+    SESSIONS.add(session_id)
     assistant_content = ""
-    messages = [
-        {"role": "system", "content": ""},
-        {"role": "user", "content": user_content}
-    ]
-    tools = []
     # before_chat
     await execute_plugins(action="before_chat", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, user_content=user_content)
 
     while True:
-        if not session_flag.get(session_id, False):
+        if not session_id in SESSIONS:
             break
 
         # 1. 发送请求
@@ -90,7 +85,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
         assistant_content = ""
         assistant_tool_calls = []
         async for chunk in response:
-            if not session_flag.get(session_id, False):
+            if not session_id in SESSIONS:
                 assistant_tool_calls.clear()
                 break
             chunk = json.loads(json.dumps(chunk, default=lambda o: o.__dict__))
@@ -130,9 +125,8 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
     # after chat
     await execute_plugins(action="after_chat", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, user_content=user_content, assistant_content=assistant_content)
     # session end
-    if session_id in session_flag:
-        del session_flag[session_id]
     yield "data: [DONE]\n\n"
+    SESSIONS.discard(session_id)
 
 
 # 生命周期管理
@@ -140,7 +134,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str):
 async def lifespan(_app: FastAPI):
     await load_plugins()
     async with AsyncExitStack() as stack:
-        for module in plugins:
+        for module in PLUGINS:
             if hasattr(module, "lifespan"):
                 try:
                     await stack.enter_async_context(module.lifespan(app=_app))
@@ -154,24 +148,37 @@ app: FastAPI = FastAPI(lifespan=lifespan)
 
 # 对话接口
 @app.get("/chat/{id}")
-async def chat_get(session_id: str = Path(..., alias="id"), message: str = Query(...), workdir: str = Query(...)):
-    if session_id in session_flag:
-        return JSONResponse(status_code=403, content={"success": False, "message": f"会话 {session_id} 正在处理中"})
-    return StreamingResponse(chat_generator(session_id, message, workdir), media_type="text/event-stream")
+async def chat_get(session_id: str = Path(..., alias="id"), message: str = Query(...), workdir: str = Query(...), stream: bool = Query(...)):
+    if session_id in SESSIONS:
+        return JSONResponse(status_code=403, content=f"会话 {session_id} 正在处理中")
+    messages = [
+        {"role": "system", "content": ""},
+        {"role": "user", "content": message}
+    ]
+    if stream:
+        return StreamingResponse(chat_generator(session_id, messages, [], message, workdir), media_type="text/event-stream")
+    async for _ in chat_generator(session_id, messages, [], message, workdir):
+        pass
+    return messages[-1]
 
 
 # 对话接口
 @app.post("/chat/{id}")
-async def chat_post(session_id: str = Path(..., alias="id"), message: str = Body(...), workdir: str = Body(...)):
-    if session_id in session_flag:
-        return JSONResponse(status_code=403, content={"success": False, "message": f"会话 {session_id} 正在处理中"})
-    return StreamingResponse(chat_generator(session_id, message, workdir), media_type="text/event-stream")
+async def chat_post(session_id: str = Path(..., alias="id"), message: str = Body(...), workdir: str = Body(...), stream: bool = Body(...)):
+    if session_id in SESSIONS:
+        return JSONResponse(status_code=403, content=f"会话 {session_id} 正在处理中")
+    messages = [
+        {"role": "system", "content": ""},
+        {"role": "user", "content": message}
+    ]
+    if stream:
+        return StreamingResponse(chat_generator(session_id, messages, [], message, workdir), media_type="text/event-stream")
+    async for _ in chat_generator(session_id, messages, [], message, workdir):
+        pass
+    return messages[-1]
 
 
 # 中断接口
 @app.api_route("/interrupt/{id}", methods=["GET", "POST"])
 async def interrupt(session_id: str = Path(..., alias="id")):
-    if session_id in session_flag:
-        session_flag[session_id] = False
-        return {"success": True, "message": f"会话 {session_id} 已标记为中断"}
-    return {"success": False, "message": f"会话 {session_id} 不存在或已结束"}
+    SESSIONS.discard(session_id)

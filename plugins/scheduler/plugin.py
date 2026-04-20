@@ -37,12 +37,11 @@ async def execute_task(task_id: str, name: str, content: str):
     url = f"{CHAT_URL}/{task_id}"
     body = {
         "message": content,
-        "workdir": "/tmp"
+        "workdir": "/tmp",
+        "stream": False
     }
     response = await async_client.post(url, json=body)
     response.raise_for_status()
-    async for _ in response.aiter_lines():
-        pass
 
 
 def job_to_dict(job) -> dict:

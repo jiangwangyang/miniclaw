@@ -1258,7 +1258,7 @@
 
     // 开始新对话
     function startNewChat() {
-        currentSessionId = crypto.randomUUID();
+        currentSessionId = crypto.randomUUID().replace(/-/g, '');
         localStorage.setItem('miniclaw_current_session', currentSessionId);
 
         // 清空聊天区域
@@ -1431,7 +1431,6 @@
         if (!currentSessionId) return;
         try {
             const response = await fetch(`/interrupt/${currentSessionId}`);
-            const result = await response.json();
         } catch (error) {
             console.error('打断失败:', error);
         }
@@ -1450,7 +1449,7 @@
         setTyping(true);
 
         try {
-            currentEventSource = new EventSource(`/chat/${currentSessionId}?message=${encodeURIComponent(message)}&workdir=${encodeURIComponent(currentWorkdir)}`);
+            currentEventSource = new EventSource(`/chat/${currentSessionId}?message=${encodeURIComponent(message)}&workdir=${encodeURIComponent(currentWorkdir)}&stream=true`);
             let assistantMessage = '';
             let messageDiv = null;
 
