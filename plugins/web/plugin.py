@@ -8,6 +8,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Query, Body
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
+TMP_DIR = "/tmp"
 DATA_DIR = "data"
 SETTINGS_FILE = "data/settings.json"
 STATIC_DIR = str(pathlib.Path(__file__).parent / "static")
@@ -21,10 +22,14 @@ async def index():
 
 @router.get("/dir/list")
 async def list_directory(path: str = Query(...)):
-    # 如果没有传入路径，默认显示用户目录
-    target_path = anyio.Path(path) if path else await anyio.Path.home()
-    if not await target_path.exists() or not await target_path.is_dir():
-        raise HTTPException(status_code=404, detail="Directory not found")
+    # 如果没有传入路径，默认使用tmp目录
+    if path:
+        target_path = anyio.Path(path)
+        if not await target_path.exists() or not await target_path.is_dir():
+            raise HTTPException(status_code=404, detail="Directory not found")
+    else:
+        target_path = anyio.Path(TMP_DIR)
+        await target_path.mkdir(parents=True, exist_ok=True)
     directories = []
     # 只列出目录
     async for child_path in target_path.iterdir():
