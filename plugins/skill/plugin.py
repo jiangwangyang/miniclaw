@@ -86,6 +86,5 @@ async def lifespan(app: FastAPI, **kwargs):
     logging.info("Skill plugin stopped")
 
 
-async def before_chat(messages: list, **kwargs):
-    if messages[0]["role"] == "system":
-        messages[0]["content"] += f"---\nAvailable Skills: {json.dumps(skills, ensure_ascii=False)}\n---\n\n"
+async def before_chat(agents: list, **kwargs):
+    agents[0] += f"---\nAvailable Skills: {json.dumps(skills, ensure_ascii=False)}\n---\n\n"

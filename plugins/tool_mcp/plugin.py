@@ -104,19 +104,21 @@ async def lifespan(app: FastAPI, **kwargs):
 
 
 async def before_chat(tools: list, **kwargs):
-    tools.extend(mcp_openai_tools)
+    tools += mcp_openai_tools
 
 
 # 执行工具
 async def before_tool(messages: list, tool_call: dict, **kwargs):
-    tool_name = tool_call["function"]["name"]
+    tool_name = tool_call["name"]
+    args = tool_call["input"]
     if tool_name not in tool_session_dict:
         return
     try:
-        args = json.loads(tool_call["function"]["arguments"])
         tool_result = await tool_session_dict[tool_name].call_tool(tool_name, args)
         tool_content = str(tool_result)
+        is_error = False
     except Exception as e:
         tool_content = f"Error: {e}"
-    tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
-    messages.append(tool_message)
+        is_error = True
+    content_block = {"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}
+    messages[-1]["content"].append(content_block)

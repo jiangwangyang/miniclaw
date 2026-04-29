@@ -7,20 +7,17 @@ from asyncio import subprocess
 from contextlib import asynccontextmanager
 
 SHELL_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "shell",
-        "description": f"Execute shell command. System platform: {platform.system()}-{platform.release()}-{platform.machine()}.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "shell command"
-                }
-            },
-            "required": ["command"]
-        }
+    "name": "shell",
+    "description": f"Execute shell command. System platform: {platform.system()}-{platform.release()}-{platform.machine()}.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "command": {
+                "type": "string",
+                "description": "shell command"
+            }
+        },
+        "required": ["command"]
     }
 }
 
@@ -44,16 +41,18 @@ async def lifespan(**kwargs):
 
 async def before_chat(tools: list, **kwargs):
     if not sys.platform.startswith("win"):
-        tools.append(SHELL_TOOL)
+        tools += [SHELL_TOOL]
 
 
 async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):
-    if tool_call["function"]["name"] != "shell":
+    if tool_call["name"] != "shell":
         return
     try:
-        args = json.loads(tool_call["function"]["arguments"])
-        tool_content = await shell(args.get("command", ""), work_dir)
+        command = tool_call["input"].get("command", "")
+        tool_content = await shell(command, work_dir)
+        is_error = False
     except Exception as e:
         tool_content = f"Error: {e}"
-    tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
-    messages.append(tool_message)
+        is_error = True
+    content_block = {"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}
+    messages[-1]["content"].append(content_block)

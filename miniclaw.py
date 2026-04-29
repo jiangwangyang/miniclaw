@@ -6,9 +6,10 @@ import sys
 from contextlib import asynccontextmanager, AsyncExitStack
 
 import anyio
+from anthropic import AsyncAnthropic, AsyncStream
+from anthropic.types.raw_message_stream_event import RawMessageStreamEvent
 from fastapi import FastAPI, Path, Body, Query
 from fastapi.responses import StreamingResponse
-from openai import AsyncOpenAI
 from starlette.responses import JSONResponse
 
 logging.basicConfig(
@@ -61,69 +62,93 @@ async def execute_plugins(action: str, **kwargs):
 
 
 # 模型对话
-async def chat_generator(session_id: str, messages: list, tools: list, user_content: str, work_dir: str):
+async def chat_generator(session_id: str, user_content: str, work_dir: str, messages: list):
     # session start
     SESSIONS.add(session_id)
-    assistant_content = ""
+    final_content = ""
+    settings = {}
+    agents = [""]
+    tools = []
+
     # before_chat
-    await execute_plugins(action="before_chat", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, user_content=user_content)
+    await execute_plugins(action="before_chat", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, user_content=user_content)
+
+    # 初始化客户端
+    if await anyio.Path(SETTINGS_FILE).exists():
+        settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8"))
+    model = settings.get("model", "")
+    client: AsyncAnthropic = AsyncAnthropic(base_url=settings.get("base_url"), api_key=settings.get("api_key"))
 
     while True:
-        if not session_id in SESSIONS:
-            break
+        # before model
+        await execute_plugins(action="before_model", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools)
 
         # 1. 发送请求
-        settings = {}
-        if await anyio.Path(SETTINGS_FILE).exists():
-            settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8"))
-        client = AsyncOpenAI(base_url=settings.get("base_url"), api_key=settings.get("api_key"))
-        response = await client.chat.completions.create(model=settings.get("model"), messages=messages, tools=tools, stream=True)
+        response: AsyncStream[RawMessageStreamEvent] = await client.messages.create(messages=messages, tools=tools, system=agents[0], model=model, max_tokens=4096, stream=True)
 
         # 2. 收集内容
-        # before model
-        await execute_plugins(action="before_model", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools)
-        assistant_content = ""
-        assistant_tool_calls = []
-        async for chunk in response:
+        assistant_block_list = []
+        messages.append({"role": "assistant", "content": assistant_block_list})
+        async for event in response:
             if not session_id in SESSIONS:
-                assistant_tool_calls.clear()
+                assistant_block_list[:] = [_ for _ in assistant_block_list if not _["type"] == "tool_use"]
                 break
-            chunk = json.loads(json.dumps(chunk, default=lambda o: o.__dict__))
-            delta = chunk["choices"][0]["delta"]
-            # SSE 流式响应
-            yield f"data: {json.dumps({"role": "assistant", "content": delta["content"]}, ensure_ascii=False)}\n\n"
-            # 收集工具调用
-            for tool_call in delta["tool_calls"] or []:
-                tool_call["function"]["arguments"] = tool_call["function"]["arguments"] or ""
-                if tool_call["index"] < len(assistant_tool_calls):
-                    assistant_tool_calls[tool_call["index"]]["function"]["arguments"] += tool_call["function"]["arguments"]
+            if event.type == "content_block_start":
+                if event.content_block.type == "thinking":
+                    assistant_block_list.append({"type": "thinking", "thinking": "", "signature": ""})
+                    yield f"data: {json.dumps({"type": "thinking", "text": ""}, ensure_ascii=False)}\n\n"
+                elif event.content_block.type == "text":
+                    assistant_block_list.append({"type": "text", "text": ""})
+                    yield f"data: {json.dumps({"type": "text", "text": ""}, ensure_ascii=False)}\n\n"
+                elif event.content_block.type == "tool_use":
+                    assistant_block_list.append({"type": "tool_use", "id": event.content_block.id, "name": event.content_block.name, "input": ""})
+                    yield f"data: {json.dumps({"type": "tool_use", "text": f"{event.content_block.name}: "}, ensure_ascii=False)}\n\n"
                 else:
-                    assistant_tool_calls.append(tool_call)
-            # 收集普通文本
-            if delta["content"]:
-                assistant_content += delta["content"]
-        yield f"data: {json.dumps({"role": "assistant", "content": "", "tool_calls": assistant_tool_calls}, ensure_ascii=False)}\n\n"
-        messages.append({"role": "assistant", "content": assistant_content, "tool_calls": assistant_tool_calls})
+                    raise Exception
+            elif event.type == "content_block_delta":
+                if event.delta.type == "thinking_delta":
+                    assistant_block_list[-1]["thinking"] += event.delta.thinking
+                    yield f"data: {json.dumps({"type": "delta", "text": event.delta.thinking}, ensure_ascii=False)}\n\n"
+                elif event.delta.type == "signature_delta":
+                    assistant_block_list[-1]["signature"] += event.delta.signature
+                elif event.delta.type == "text_delta":
+                    assistant_block_list[-1]["text"] += event.delta.text
+                    yield f"data: {json.dumps({"type": "delta", "text": event.delta.text}, ensure_ascii=False)}\n\n"
+                elif event.delta.type == "input_json_delta":
+                    assistant_block_list[-1]["input"] += event.delta.partial_json
+                    yield f"data: {json.dumps({"type": "delta", "text": event.delta.partial_json}, ensure_ascii=False)}\n\n"
+                else:
+                    raise Exception
+            elif event.type == "content_block_stop":
+                if assistant_block_list[-1]["type"] == "tool_use":
+                    assistant_block_list[-1]["input"] = json.loads(assistant_block_list[-1]["input"])
+
         # after model
-        await execute_plugins(action="after_model", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools)
+        await execute_plugins(action="after_model", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools)
 
-        # 3. 工具调用
-        for tool_call in assistant_tool_calls:
-            # before tool
-            await execute_plugins(action="before_tool", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, tool_call=tool_call)
-            # yield tool
-            if messages[-1]["role"] != "tool" or messages[-1]["tool_call_id"] != tool_call["id"]:
-                messages.append({"role": "tool", "tool_call_id": tool_call["id"], "content": "Can't find tool"})
-            yield f"data: {json.dumps(messages[-1], ensure_ascii=False)}\n\n"
-            # after tool
-            await execute_plugins(action="after_tool", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, tool_call=tool_call)
-
-        # 4. 判断结束
-        if not assistant_tool_calls:
+        # 3. 判断结束
+        if not [_ for _ in assistant_block_list if _["type"] == "tool_use"]:
+            final_content = assistant_block_list[-1]["text"]
             break
 
+        # 4. 工具调用
+        tool_result_block_list = []
+        messages.append({"role": "user", "content": tool_result_block_list})
+        for tool_use_block in [_ for _ in assistant_block_list if _["type"] == "tool_use"]:
+            # before tool
+            await execute_plugins(action="before_tool", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, tool_call=tool_use_block)
+
+            # yield tool
+            if not tool_result_block_list or tool_result_block_list[-1]["tool_use_id"] != tool_use_block["id"]:
+                tool_result_block_list.append({"type": "tool_result", "tool_use_id": tool_use_block["id"], "content": "Can't find tool", "is_error": True})
+            yield f"data: {json.dumps({"type": "tool_result", "text": tool_result_block_list[-1]["content"]}, ensure_ascii=False)}\n\n"
+
+            # after tool
+            await execute_plugins(action="after_tool", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, tool_call=tool_use_block)
+
     # after chat
-    await execute_plugins(action="after_chat", session_id=session_id, work_dir=work_dir, messages=messages, tools=tools, user_content=user_content, assistant_content=assistant_content)
+    await execute_plugins(action="after_chat", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, user_content=user_content, assistant_content=final_content)
+
     # session end
     yield "data: [DONE]\n\n"
     SESSIONS.discard(session_id)
@@ -151,15 +176,12 @@ app: FastAPI = FastAPI(lifespan=lifespan)
 async def chat_get(session_id: str = Path(..., alias="id"), message: str = Query(...), workdir: str = Query(...), stream: bool = Query(...)):
     if session_id in SESSIONS:
         return JSONResponse(status_code=403, content=f"会话 {session_id} 正在处理中")
-    messages = [
-        {"role": "system", "content": ""},
-        {"role": "user", "content": message}
-    ]
+    messages = [{"role": "user", "content": message}]
     if stream:
-        return StreamingResponse(chat_generator(session_id, messages, [], message, workdir), media_type="text/event-stream")
-    async for _ in chat_generator(session_id, messages, [], message, workdir):
+        return StreamingResponse(chat_generator(session_id, message, workdir, messages), media_type="text/event-stream")
+    async for _ in chat_generator(session_id, message, workdir, messages):
         pass
-    return messages[-1]
+    return messages[-1]["content"][-1]
 
 
 # 对话接口
@@ -167,15 +189,12 @@ async def chat_get(session_id: str = Path(..., alias="id"), message: str = Query
 async def chat_post(session_id: str = Path(..., alias="id"), message: str = Body(...), workdir: str = Body(...), stream: bool = Body(...)):
     if session_id in SESSIONS:
         return JSONResponse(status_code=403, content=f"会话 {session_id} 正在处理中")
-    messages = [
-        {"role": "system", "content": ""},
-        {"role": "user", "content": message}
-    ]
+    messages = [{"role": "user", "content": message}]
     if stream:
-        return StreamingResponse(chat_generator(session_id, messages, [], message, workdir), media_type="text/event-stream")
-    async for _ in chat_generator(session_id, messages, [], message, workdir):
+        return StreamingResponse(chat_generator(session_id, message, workdir, messages), media_type="text/event-stream")
+    async for _ in chat_generator(session_id, message, workdir, messages):
         pass
-    return messages[-1]
+    return messages[-1]["content"][-1]
 
 
 # 中断接口

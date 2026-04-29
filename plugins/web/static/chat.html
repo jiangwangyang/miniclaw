@@ -1060,9 +1060,6 @@
 
     // 页面加载初始化
     document.addEventListener('DOMContentLoaded', () => {
-        // 基础 UI 初始化
-        initDefaultWorkspace();
-        loadSessionList();
 
         // 事件绑定
         messageInput.addEventListener('input', autoResize);
@@ -1072,14 +1069,13 @@
                 sendMessage();
             }
         });
-
         manualPathInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') handleManualJump();
         });
 
         // 会话恢复
-        const savedSessionId = localStorage.getItem('miniclaw_current_session');
-        savedSessionId ? loadSession(savedSessionId) : startNewChat();
+        loadSessionList();
+        startNewChat();
     });
 
     // 远程加载目录列表
@@ -1159,7 +1155,6 @@
         const display = document.getElementById('workspaceDisplay');
         display.textContent = path;
         display.title = path;
-        localStorage.setItem('miniclaw_last_workdir', path); // 可选：持久化到本地
     }
 
     function closeDirModal() {
@@ -1204,6 +1199,83 @@
         }
     }
 
+    // 加载指定会话
+    async function loadSession(sessionId) {
+        currentSessionId = sessionId;
+
+        try {
+            const response = await fetch(`/session/${sessionId}`);
+            const data = await response.json();
+
+            // 更新工作目录
+            updateWorkspaceUI(data.work_dir);
+
+            // 清空聊天区域
+            chatContainer.innerHTML = '';
+            emptyState.style.display = 'none';
+
+            // 渲染历史消息
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    if (msg.role === 'user' && Object.prototype.toString.call(msg.content) === '[object String]') {
+                        addMessage(msg.content, 'user', msg.time);
+                    } else if (msg.role === 'assistant') {
+                        msg.content.forEach(block => {
+                            if (block.type === 'thinking') {
+                                addMessage(block.thinking, 'assistant', msg.time);
+                            }
+                            if (block.type === 'text') {
+                                addMessage(block.text, 'assistant', msg.time);
+                            }
+                            if (block.type === 'tool_use') {
+                                addMessage(JSON.stringify(block.input), 'tool', msg.time);
+                            }
+                        });
+                    }
+                });
+            } else {
+                chatContainer.appendChild(emptyState);
+                emptyState.style.display = 'flex';
+            }
+
+            // 清空输入框并重置高度
+            messageInput.value = '';
+            autoResize();
+
+            // 启用输入
+            enableInput();
+            sessionInfo.textContent = `${sessionId}`;
+
+            // 更新高亮
+            const items = sessionList.querySelectorAll('.session-item');
+            items.forEach(item => {
+                item.classList.toggle('active', item.dataset.id === sessionId);
+            });
+        } catch (error) {
+            console.error('加载会话失败:', error);
+            addMessage('加载会话失败: ' + error.message, 'assistant', getCurrentTime());
+        }
+    }
+
+    // 删除会话
+    async function deleteSession(sessionId) {
+        closeConfirmDialog();
+
+        try {
+            const response = await fetch(`/session/${sessionId}`, {
+                method: 'DELETE'
+            });
+            // 如果删除的是当前会话，开始新对话
+            if (currentSessionId === sessionId) {
+                startNewChat();
+            }
+            // 刷新会话列表
+            await loadSessionList();
+        } catch (error) {
+            console.error('删除会话失败:', error);
+        }
+    }
+
     // 确认删除会话
     function confirmDeleteSession(sessionId) {
         const overlay = document.createElement('div');
@@ -1237,29 +1309,9 @@
         }
     }
 
-    // 删除会话
-    async function deleteSession(sessionId) {
-        closeConfirmDialog();
-
-        try {
-            const response = await fetch(`/session/${sessionId}`, {
-                method: 'DELETE'
-            });
-            // 如果删除的是当前会话，开始新对话
-            if (currentSessionId === sessionId) {
-                startNewChat();
-            }
-            // 刷新会话列表
-            await loadSessionList();
-        } catch (error) {
-            console.error('删除会话失败:', error);
-        }
-    }
-
     // 开始新对话
     function startNewChat() {
         currentSessionId = crypto.randomUUID().replace(/-/g, '');
-        localStorage.setItem('miniclaw_current_session', currentSessionId);
 
         // 清空聊天区域
         chatContainer.innerHTML = '';
@@ -1284,64 +1336,6 @@
         initDefaultWorkspace();
     }
 
-    // 加载指定会话
-    async function loadSession(sessionId) {
-        currentSessionId = sessionId;
-        localStorage.setItem('miniclaw_current_session', sessionId);
-
-        try {
-            const response = await fetch(`/session/${sessionId}`);
-            const data = await response.json();
-
-            // 更新工作目录
-            updateWorkspaceUI(data.work_dir);
-
-            // 清空聊天区域
-            chatContainer.innerHTML = '';
-            emptyState.style.display = 'none';
-
-            // 渲染历史消息
-            if (data.messages && data.messages.length > 0) {
-                data.messages.forEach(msg => {
-                    if (msg.role === 'user') {
-                        addMessage(msg.content, 'user', msg.time);
-                    } else if (msg.role === 'assistant') {
-                        if (msg.content) {
-                            addMessage(msg.content, 'assistant', msg.time);
-                        }
-                        if (msg.tool_calls) {
-                            for (let i = 0; i < msg.tool_calls.length; i++) {
-                                const tool_name = msg.tool_calls[i].function.name;
-                                const arguments = msg.tool_calls[i].function.arguments;
-                                addMessage(`${tool_name} ${arguments.slice(0, 100)}`, 'tool', msg.time);
-                            }
-                        }
-                    }
-                });
-            } else {
-                chatContainer.appendChild(emptyState);
-                emptyState.style.display = 'flex';
-            }
-
-            // 清空输入框并重置高度
-            messageInput.value = '';
-            autoResize();
-
-            // 启用输入
-            enableInput();
-            sessionInfo.textContent = `${sessionId}`;
-
-            // 更新高亮
-            const items = sessionList.querySelectorAll('.session-item');
-            items.forEach(item => {
-                item.classList.toggle('active', item.dataset.id === sessionId);
-            });
-        } catch (error) {
-            console.error('加载会话失败:', error);
-            addMessage('加载会话失败: ' + error.message, 'assistant', getCurrentTime());
-        }
-    }
-
     // 启用输入
     function enableInput() {
         messageInput.disabled = false;
@@ -1362,8 +1356,6 @@
 
     /**
      * 添加消息到聊天容器
-     * @param {string} content - 消息内容
-     * @param {string} type - 消息类型: 'user' | 'assistant' | 'tool'
      */
     function addMessage(content, type, time) {
         // 去除前后多余的空白字符
@@ -1450,7 +1442,7 @@
 
         try {
             currentEventSource = new EventSource(`/chat/${currentSessionId}?message=${encodeURIComponent(message)}&workdir=${encodeURIComponent(currentWorkdir)}&stream=true`);
-            let assistantMessage = '';
+            let text = '';
             let messageDiv = null;
 
             currentEventSource.onmessage = (event) => {
@@ -1468,27 +1460,46 @@
 
                 try {
                     const data = JSON.parse(line);
-                    if (data && data.role === 'assistant' && data.content) {
-                        if (!messageDiv) {
-                            messageDiv = document.createElement('div');
-                            messageDiv.className = 'assistant-message';
-                            chatContainer.appendChild(messageDiv);
-                        }
-                        assistantMessage += data.content;
+                    if (data.type === 'thinking') {
+                        text = data.text;
+                        messageDiv = document.createElement('div');
+                        messageDiv.className = 'assistant-message';
                         messageDiv.innerHTML = `
-                            ${formatMarkdown(assistantMessage)}
+                            ${formatMarkdown(text)}
+                            <div class="message-time">${getCurrentTime()}</div>
+                        `;
+                        chatContainer.appendChild(messageDiv);
+                        scrollToBottom();
+                    }
+                    if (data.type === 'text') {
+                        text = data.text;
+                        messageDiv = document.createElement('div');
+                        messageDiv.className = 'assistant-message';
+                        messageDiv.innerHTML = `
+                            ${formatMarkdown(text)}
+                            <div class="message-time">${getCurrentTime()}</div>
+                        `;
+                        chatContainer.appendChild(messageDiv);
+                        scrollToBottom();
+                    }
+                    if (data.type === 'tool_use') {
+                        text = data.text;
+                        messageDiv = document.createElement('div');
+                        messageDiv.className = 'tool-message';
+                        messageDiv.innerHTML = `
+                            ${text}
+                            <div class="message-time">${getCurrentTime()}</div>
+                        `;
+                        chatContainer.appendChild(messageDiv);
+                        scrollToBottom();
+                    }
+                    if (data.type === 'delta') {
+                        text += data.text;
+                        messageDiv.innerHTML = `
+                            ${messageDiv.className === 'tool-message' ? text.slice(0, 100) : formatMarkdown(text)}
                             <div class="message-time">${getCurrentTime()}</div>
                         `;
                         scrollToBottom();
-                    }
-                    if (data && data.role === 'assistant' && data.tool_calls) {
-                        for (let i = 0; i < data.tool_calls.length; i++) {
-                            const tool_name = data.tool_calls[i].function.name;
-                            const arguments = data.tool_calls[i].function.arguments;
-                            addMessage(`${tool_name} ${arguments.slice(0, 100)}`, 'tool', getCurrentTime());
-                        }
-                        assistantMessage = '';
-                        messageDiv = null;
                     }
                 } catch (e) {
                     // 忽略非 JSON 行
@@ -1499,7 +1510,7 @@
                 currentEventSource.close();
                 currentEventSource = null;
                 setTyping(false);
-                if (!assistantMessage) {
+                if (!text) {
                     addMessage('抱歉，我没有收到响应。', 'assistant', getCurrentTime());
                 }
             };

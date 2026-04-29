@@ -7,21 +7,19 @@ from asyncio import subprocess
 from contextlib import asynccontextmanager
 
 PYTHON_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "python",
-        "description": f"Execute python code. Python version: {platform.python_version()}.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "description": "python code"
-                }
-            },
-            "required": ["code"]
-        }
+    "name": "python",
+    "description": f"Execute python code. Python version: {platform.python_version()}.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "code": {
+                "type": "string",
+                "description": "python code"
+            }
+        },
+        "required": ["code"]
     }
+
 }
 
 
@@ -39,16 +37,18 @@ async def lifespan(**kwargs):
 
 
 async def before_chat(tools: list, **kwargs):
-    tools.append(PYTHON_TOOL)
+    tools += [PYTHON_TOOL]
 
 
 async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):
-    if tool_call["function"]["name"] != "python":
+    if tool_call["name"] != "python":
         return
     try:
-        args = json.loads(tool_call["function"]["arguments"])
-        tool_content = await execute_python_code(args.get("code", ""), work_dir)
+        python_code = tool_call["input"].get("code", "")
+        tool_content = await execute_python_code(python_code, work_dir)
+        is_error = False
     except Exception as e:
         tool_content = f"Error: {e}"
-    tool_message = {"role": "tool", "tool_call_id": tool_call["id"], "content": tool_content}
-    messages.append(tool_message)
+        is_error = True
+    content_block = {"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}
+    messages[-1]["content"].append(content_block)
