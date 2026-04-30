@@ -8,14 +8,13 @@ import aiosqlite
 import anyio
 from fastapi import FastAPI, APIRouter, Path, HTTPException
 
-DATA_DIR = "data"
 DB_FILE = "data/session.db"
 router: APIRouter = APIRouter(prefix="/session")
 
 
 # 初始化数据库
 async def init_db():
-    await anyio.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
+    await anyio.Path(DB_FILE).parent.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(DB_FILE) as db:
         # 会话表
         await db.execute("""
@@ -47,7 +46,6 @@ async def init_db():
 # 获取所有会话列表
 @router.get("/list")
 async def get_sessions():
-    sessions = []
     async with aiosqlite.connect(DB_FILE) as db:
         db.row_factory = aiosqlite.Row
         # 直接查询 t_session 表，按更新时间倒序
@@ -58,15 +56,13 @@ async def get_sessions():
         """
         async with db.execute(sql) as cursor:
             rows = await cursor.fetchall()
-            for row in rows:
-                sessions.append({
-                    "id": row["id"],
-                    "title": row["title"],
-                    "work_dir": row["work_dir"],
-                    "create_time": row["create_time"],
-                    "updated_at": row["update_time"],
-                })
-    return sessions
+    return [{
+        "id": row["id"],
+        "title": row["title"],
+        "work_dir": row["work_dir"],
+        "create_time": row["create_time"],
+        "updated_at": row["update_time"],
+    } for row in rows]
 
 
 # 获取单个会话详情
@@ -82,16 +78,13 @@ async def get_session(session_id: str = Path(..., alias="id")):
                 raise HTTPException(status_code=404, detail="Session not found")
         # 查询所有消息，按 id 升序
         sql = "SELECT role, content, time FROM t_message WHERE session_id = ? ORDER BY id ASC"
-        messages = []
         async with db.execute(sql, (session_id,)) as cursor:
             rows = await cursor.fetchall()
-            for row in rows:
-                msg = {
-                    "role": row["role"],
-                    "content": json.loads(row["content"]),
-                    "time": row["time"]
-                }
-                messages.append(msg)
+    messages = [{
+        "role": row["role"],
+        "content": json.loads(row["content"]),
+        "time": row["time"]
+    } for row in rows]
     return {
         "id": sess["id"],
         "title": sess["title"],

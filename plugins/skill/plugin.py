@@ -7,12 +7,12 @@ import anyio
 from fastapi import APIRouter, Path, Body, FastAPI
 
 SKILLS_DIR_LIST = ["external_skills/", "skills/", str(pathlib.Path.home() / ".agents" / "skills")]
-skills: list[dict[str, str]] = []
+SKILLS: list[dict[str, str]] = []
 router: APIRouter = APIRouter()
 
 
 async def load_skills():
-    skills.clear()
+    SKILLS.clear()
     loaded_skill_names = set()
     # 遍历技能目录
     for skills_dir in SKILLS_DIR_LIST:
@@ -41,19 +41,19 @@ async def load_skills():
                 elif line.startswith("description:"):
                     description = line[12:].strip()
             if name == skill_dir.name:
-                skills.append({"name": name, "description": description, "path": str(await skill_file.absolute())})
+                SKILLS.append({"name": name, "description": description, "path": str(await skill_file.absolute())})
                 loaded_skill_names.add(name)
-    logging.info(f"Loaded {len(skills)} skills: {json.dumps(skills, ensure_ascii=False)}")
+    logging.info(f"Loaded {len(SKILLS)} skills: {json.dumps(SKILLS, ensure_ascii=False)}")
 
 
 @router.get("/skill/list")
 async def get_skill_list():
-    return skills
+    return SKILLS
 
 
 @router.get("/skill/{name}")
 async def get_skill(name: str = Path(...)):
-    filtered_skills = [skill for skill in skills if skill["name"] == name]
+    filtered_skills = [skill for skill in SKILLS if skill["name"] == name]
     if not filtered_skills:
         return {}
     skill = filtered_skills[0]
@@ -87,4 +87,5 @@ async def lifespan(app: FastAPI, **kwargs):
 
 
 async def before_chat(agents: list, **kwargs):
-    agents[0] += f"---\nAvailable Skills: {json.dumps(skills, ensure_ascii=False)}\n---\n\n"
+    if agents:
+        agents[0] += f"---\nAvailable Skills: {json.dumps(SKILLS, ensure_ascii=False)}\n---\n\n"

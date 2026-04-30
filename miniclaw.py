@@ -1,23 +1,18 @@
 import importlib
 import json
 import logging
-import os
 import sys
 from contextlib import asynccontextmanager, AsyncExitStack
 
 import anyio
+import httpx
 from anthropic import AsyncAnthropic, AsyncStream
 from anthropic.types.raw_message_stream_event import RawMessageStreamEvent
 from fastapi import FastAPI, Path, Body, Query
 from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-DATA_DIR = "data"
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 SETTINGS_FILE = "data/settings.json"
 PLUGINS_DIR_LIST = ["external_plugins/", "plugins/"]
 PLUGINS: list[object] = []
@@ -30,23 +25,26 @@ async def load_plugins():
     loaded_plugin_names = set()
     # 遍历插件目录
     for plugins_dir in PLUGINS_DIR_LIST:
-        if not os.path.exists(plugins_dir):
+        plugins_dir = anyio.Path(plugins_dir)
+        if not await plugins_dir.exists() or not await plugins_dir.is_dir():
             continue
         # 加入插件目录到 sys.path
         if plugins_dir not in sys.path:
-            sys.path.insert(0, plugins_dir)
+            sys.path.append(str(plugins_dir))
         # 加载插件
-        for entry in os.listdir(plugins_dir):
-            if entry in loaded_plugin_names:
+        async for plugin_dir in plugins_dir.iterdir():
+            if plugin_dir.name in loaded_plugin_names:
                 continue
-            if os.path.isfile(os.path.join(plugins_dir, entry, "plugin.py")):
-                module_name = f"{entry}.plugin"
-                try:
-                    module = importlib.import_module(module_name)
-                    PLUGINS.append(module)
-                    loaded_plugin_names.add(entry)
-                except Exception as e:
-                    logging.error(f"加载插件 {entry} 失败: {e}")
+            plugin_path = plugins_dir / plugin_dir.name / "plugin.py"
+            if not await plugin_path.is_file():
+                continue
+            module_name = f"{plugin_dir.name}.plugin"
+            try:
+                module = importlib.import_module(module_name)
+                PLUGINS.append(module)
+                loaded_plugin_names.add(plugin_dir.name)
+            except Exception as e:
+                logging.error(f"加载插件 {plugin_dir.name} 失败: {e}")
     logging.info(f"Loaded {len(PLUGINS)} plugins: {PLUGINS}")
 
 
@@ -65,8 +63,6 @@ async def execute_plugins(action: str, **kwargs):
 async def chat_generator(session_id: str, user_content: str, work_dir: str, messages: list):
     # session start
     SESSIONS.add(session_id)
-    final_content = ""
-    settings = {}
     agents = [""]
     tools = []
 
@@ -74,10 +70,11 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
     await execute_plugins(action="before_chat", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, user_content=user_content)
 
     # 初始化客户端
+    settings = {}
     if await anyio.Path(SETTINGS_FILE).exists():
         settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8"))
     model = settings.get("model", "")
-    client: AsyncAnthropic = AsyncAnthropic(base_url=settings.get("base_url"), api_key=settings.get("api_key"))
+    client: AsyncAnthropic = AsyncAnthropic(base_url=settings.get("base_url"), api_key=settings.get("api_key"), http_client=httpx.AsyncClient(verify=False))
 
     while True:
         # before model
@@ -88,20 +85,20 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
 
         # 2. 收集内容
         assistant_block_list = []
-        messages.append({"role": "assistant", "content": assistant_block_list})
+        messages += [{"role": "assistant", "content": assistant_block_list}]
         async for event in response:
             if not session_id in SESSIONS:
-                assistant_block_list[:] = [_ for _ in assistant_block_list if not _["type"] == "tool_use"]
+                assistant_block_list[:] = [_ for _ in assistant_block_list if _["type"] != "tool_use"]
                 break
             if event.type == "content_block_start":
                 if event.content_block.type == "thinking":
-                    assistant_block_list.append({"type": "thinking", "thinking": "", "signature": ""})
+                    assistant_block_list += [{"type": "thinking", "thinking": "", "signature": ""}]
                     yield f"data: {json.dumps({"type": "thinking", "text": ""}, ensure_ascii=False)}\n\n"
                 elif event.content_block.type == "text":
-                    assistant_block_list.append({"type": "text", "text": ""})
+                    assistant_block_list += [{"type": "text", "text": ""}]
                     yield f"data: {json.dumps({"type": "text", "text": ""}, ensure_ascii=False)}\n\n"
                 elif event.content_block.type == "tool_use":
-                    assistant_block_list.append({"type": "tool_use", "id": event.content_block.id, "name": event.content_block.name, "input": ""})
+                    assistant_block_list += [{"type": "tool_use", "id": event.content_block.id, "name": event.content_block.name, "input": ""}]
                     yield f"data: {json.dumps({"type": "tool_use", "text": f"{event.content_block.name}: "}, ensure_ascii=False)}\n\n"
                 else:
                     raise Exception
@@ -133,14 +130,14 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
 
         # 4. 工具调用
         tool_result_block_list = []
-        messages.append({"role": "user", "content": tool_result_block_list})
+        messages += [{"role": "user", "content": tool_result_block_list}]
         for tool_use_block in [_ for _ in assistant_block_list if _["type"] == "tool_use"]:
             # before tool
             await execute_plugins(action="before_tool", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, tool_call=tool_use_block)
 
             # yield tool
             if not tool_result_block_list or tool_result_block_list[-1]["tool_use_id"] != tool_use_block["id"]:
-                tool_result_block_list.append({"type": "tool_result", "tool_use_id": tool_use_block["id"], "content": "Can't find tool", "is_error": True})
+                tool_result_block_list += [{"type": "tool_result", "tool_use_id": tool_use_block["id"], "content": "Can't find tool", "is_error": True}]
             yield f"data: {json.dumps({"type": "tool_result", "text": tool_result_block_list[-1]["content"]}, ensure_ascii=False)}\n\n"
 
             # after tool
@@ -164,7 +161,7 @@ async def lifespan(_app: FastAPI):
                 try:
                     await stack.enter_async_context(module.lifespan(app=_app))
                 except Exception as e:
-                    logging.error(f"执行插件 {module.__name__} 的 lifespan 钩子函数失败: {e}", e)
+                    logging.error(f"执行插件 {module.__name__} 的 lifespan 钩子函数失败: {e}")
         yield
 
 

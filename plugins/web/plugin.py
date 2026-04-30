@@ -9,7 +9,6 @@ from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
 TMP_DIR = "/tmp"
-DATA_DIR = "data"
 SETTINGS_FILE = "data/settings.json"
 STATIC_DIR = str(pathlib.Path(__file__).parent / "static")
 router = APIRouter()
@@ -30,14 +29,11 @@ async def list_directory(path: str = Query(...)):
     else:
         target_path = anyio.Path(TMP_DIR)
         await target_path.mkdir(parents=True, exist_ok=True)
-    directories = []
     # 只列出目录
-    async for child_path in target_path.iterdir():
-        if await child_path.is_dir():
-            directories.append({
-                "name": child_path.name,
-                "path": str(await child_path.absolute())
-            })
+    directories = [{
+        "name": child_path.name,
+        "path": str(await child_path.absolute())
+    } async for child_path in target_path.iterdir() if await child_path.is_dir()]
     return {
         "current_path": str(await target_path.absolute()),
         "parent_path": str(await target_path.parent.absolute()),
@@ -47,18 +43,19 @@ async def list_directory(path: str = Query(...)):
 
 @router.get("/setting")
 async def get_settings():
-    await anyio.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
-    if not await anyio.Path(SETTINGS_FILE).exists():
-        await anyio.Path(SETTINGS_FILE).write_text("{}", encoding="utf-8")
-    content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+    settings_file = anyio.Path(SETTINGS_FILE)
+    if not await settings_file.exists():
+        return {}
+    content = await settings_file.read_text(encoding="utf-8")
     return json.loads(content)
 
 
 @router.post("/setting")
 async def save_settings(content: str = Body(...)):
-    await anyio.Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
+    settings_file = anyio.Path(SETTINGS_FILE)
+    await settings_file.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(json.loads(content), ensure_ascii=False, indent=4)
-    await anyio.Path(SETTINGS_FILE).write_text(content, encoding="utf-8")
+    await settings_file.write_text(content, encoding="utf-8")
 
 
 @asynccontextmanager

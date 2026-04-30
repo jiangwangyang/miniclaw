@@ -12,7 +12,7 @@ from mcp.client.streamable_http import streamablehttp_client
 SETTINGS_FILE = "data/settings.json"
 tool_session_dict: dict[str, ClientSession] = {}
 mcp_tools: list[Tool] = []
-mcp_openai_tools: list[dict] = []
+mcp_dict_tools: list[dict] = []
 router: APIRouter = APIRouter()
 
 
@@ -54,15 +54,12 @@ async def register_mcp_client(name, proto_type, **kwargs):
         tools_resp = await session.list_tools()
         for tool in tools_resp.tools:
             tool_session_dict[tool.name] = session
-            mcp_tools.append(tool)
-            mcp_openai_tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.inputSchema,
-                }
-            })
+        mcp_tools.extend(tools_resp.tools)
+        mcp_dict_tools.extend([{
+            "name": tool.name,
+            "description": tool.description,
+            "input_schema": tool.inputSchema,
+        } for tool in tools_resp.tools])
         logging.info(f"MCP client {name} started, having {len(tools_resp.tools)} tools: {json.dumps(tools_resp.tools, ensure_ascii=False, default=lambda o: o.__dict__)}")
         # 等待
         yield
@@ -75,8 +72,9 @@ async def lifespan(app: FastAPI, **kwargs):
     # 注册路由
     app.include_router(router)
     # 加载设置
-    if await anyio.Path(SETTINGS_FILE).exists():
-        settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+    settings_file = anyio.Path(SETTINGS_FILE)
+    if await settings_file.exists():
+        settings_content = await settings_file.read_text(encoding="utf-8")
         settings = json.loads(settings_content)
     else:
         settings = {}
@@ -96,7 +94,7 @@ async def lifespan(app: FastAPI, **kwargs):
                     logging.warning(f"Unknown MCP server type: {server.get('type')}")
             except Exception as e:
                 logging.error(f"Error registering {name}: {e}")
-        logging.info(f"MCP plugin started, having {len(mcp_openai_tools)} MCP tools: {json.dumps(mcp_openai_tools)}")
+        logging.info(f"MCP plugin started, having {len(mcp_dict_tools)} MCP tools: {json.dumps(mcp_dict_tools)}")
         # 等待
         yield
         # 结束
@@ -104,7 +102,7 @@ async def lifespan(app: FastAPI, **kwargs):
 
 
 async def before_chat(tools: list, **kwargs):
-    tools += mcp_openai_tools
+    tools += mcp_dict_tools
 
 
 # 执行工具
@@ -115,10 +113,9 @@ async def before_tool(messages: list, tool_call: dict, **kwargs):
         return
     try:
         tool_result = await tool_session_dict[tool_name].call_tool(tool_name, args)
-        tool_content = str(tool_result)
-        is_error = False
+        tool_content = str(tool_result.content)
+        is_error = tool_result.isError
     except Exception as e:
         tool_content = f"Error: {e}"
         is_error = True
-    content_block = {"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}
-    messages[-1]["content"].append(content_block)
+    messages[-1]["content"] += [{"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}]

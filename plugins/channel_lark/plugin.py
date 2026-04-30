@@ -61,12 +61,14 @@ def message_consumer():
             response = requests.post(url, json=body, stream=True)
             response.raise_for_status()
             # 回复飞书消息
-            text = response.json().get("content")
+            text = response.json().get("text", "")
             send_feishu_message(open_id, text)
             # 处理完成
             message_queue.task_done()
         except queue.Empty:
             pass
+        except Exception as e:
+            logging.error(f"Lark message consumer error: {e}")
 
 
 # 飞书消息监听器 将飞书消息放入队列 确保按序处理
@@ -91,8 +93,9 @@ def event_listener():
 @asynccontextmanager
 async def lifespan(**kwargs):
     global lark_app_id, lark_app_secret
-    if await anyio.Path(SETTINGS_FILE).exists():
-        settings_content = await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")
+    settings_file = anyio.Path(SETTINGS_FILE)
+    if await settings_file.exists():
+        settings_content = await settings_file.read_text(encoding="utf-8")
         settings = json.loads(settings_content)
     else:
         settings = {}

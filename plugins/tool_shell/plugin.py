@@ -22,12 +22,6 @@ SHELL_TOOL = {
 }
 
 
-async def shell(command: str, work_dir: str) -> str:
-    process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=work_dir)
-    stdout, stderr = await process.communicate()
-    return f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
-
-
 @asynccontextmanager
 async def lifespan(**kwargs):
     if sys.platform.startswith("win"):
@@ -49,10 +43,12 @@ async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):
         return
     try:
         command = tool_call["input"].get("command", "")
-        tool_content = await shell(command, work_dir)
-        is_error = False
+        process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=work_dir)
+        stdout, stderr = await process.communicate()
+        stdout, stderr = stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace")
+        tool_content = f"{stdout}{stderr}"
+        is_error = True if stderr else False
     except Exception as e:
         tool_content = f"Error: {e}"
         is_error = True
-    content_block = {"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}
-    messages[-1]["content"].append(content_block)
+    messages[-1]["content"] += [{"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}]
