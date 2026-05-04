@@ -84,7 +84,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
         await execute_plugins(action="before_model", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools)
 
         # 1. 发送请求
-        response: AsyncStream[RawMessageStreamEvent] = await client.messages.create(messages=messages, tools=tools, system=agents[0], model=model, max_tokens=4096, stream=True)
+        response: AsyncStream[RawMessageStreamEvent] = await client.messages.create(messages=messages, tools=tools, system=agents[0], model=model, max_tokens=1 << 18, stream=True)
 
         # 2. 收集内容
         assistant_block_list = []
