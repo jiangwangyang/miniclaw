@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import pathlib
 import queue
 import threading
 import uuid
@@ -11,7 +12,7 @@ import lark_oapi as lark
 import requests
 from lark_oapi.api.im.v1 import *
 
-SETTINGS_FILE = "data/settings.json"
+SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
 CHAT_URL = "http://localhost:11223/chat"
 INTERRUPT_URL = "http://localhost:11223/interrupt"
 MESSAGE_QUEUE = queue.Queue(maxsize=10)

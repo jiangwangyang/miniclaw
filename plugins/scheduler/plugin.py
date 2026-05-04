@@ -10,9 +10,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, APIRouter, HTTPException
 from pydantic import BaseModel
 
-pathlib.Path("data").mkdir(parents=True, exist_ok=True)
 CHAT_URL = "http://localhost:11223/chat"
-SCHEDULER = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url="sqlite:///data/tasks.db")})
+DB_FILE = str(pathlib.Path.home() / ".miniclaw" / "tasks.db")
+pathlib.Path(DB_FILE).parent.mkdir(parents=True, exist_ok=True)
+SCHEDULER = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///{DB_FILE}")})
 ASYNC_CLIENT = httpx.AsyncClient()
 ROUTER = APIRouter(prefix="/task")
 

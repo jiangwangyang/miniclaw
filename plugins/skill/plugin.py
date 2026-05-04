@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import anyio
 from fastapi import APIRouter, Path, Body, FastAPI
 
-SKILLS_DIR_LIST = ["external_skills/", "skills/", str(pathlib.Path.home() / ".agents" / "skills")]
+SKILLS_DIR_LIST = [str(pathlib.Path.home() / ".miniclaw" / "skills"), "skills", str(pathlib.Path.home() / ".agents" / "skills")]
 SKILLS: list[dict] = []
 ROUTER = APIRouter()
 
@@ -70,7 +70,7 @@ async def get_skill(name: str = Path(...)):
 
 @ROUTER.post("/skill/{name}")
 async def save_skill(name: str = Path(...), description: str = Body(...), content: str = Body(...)):
-    skill_dir = anyio.Path("external_skills") / name
+    skill_dir = anyio.Path(SKILLS_DIR_LIST[0]) / name
     await skill_dir.mkdir(parents=True, exist_ok=True)
     skill_file = skill_dir / "SKILL.md"
     await skill_file.write_text(f"---\nname: {name}\ndescription: {description}\n---\n\n{content}", encoding="utf-8")

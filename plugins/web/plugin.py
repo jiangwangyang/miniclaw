@@ -9,7 +9,7 @@ from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
 TMP_DIR = "/tmp"
-SETTINGS_FILE = "data/settings.json"
+SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
 STATIC_DIR = str(pathlib.Path(__file__).parent / "static")
 ROUTER = APIRouter()
 

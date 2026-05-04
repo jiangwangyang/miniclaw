@@ -1,5 +1,6 @@
 import json
 import logging
+import pathlib
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -8,7 +9,7 @@ import aiosqlite
 import anyio
 from fastapi import FastAPI, APIRouter, Path, HTTPException
 
-DB_FILE = "data/session.db"
+DB_FILE = str(pathlib.Path.home() / ".miniclaw" / "session.db")
 ROUTER = APIRouter(prefix="/session")
 
 

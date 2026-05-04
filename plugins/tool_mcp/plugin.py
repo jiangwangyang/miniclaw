@@ -1,5 +1,6 @@
 import json
 import logging
+import pathlib
 from contextlib import asynccontextmanager, AsyncExitStack
 
 import anyio
@@ -9,7 +10,7 @@ from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
-SETTINGS_FILE = "data/settings.json"
+SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
 TOOL_SESSION_DICT: dict[str, ClientSession] = {}
 MCP_TOOLS: list[Tool] = []
 MCP_DICT_TOOLS: list[dict] = []
