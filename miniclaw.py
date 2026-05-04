@@ -12,12 +12,14 @@ from fastapi import FastAPI, Path, Body, Query
 from fastapi.responses import StreamingResponse
 from starlette.responses import JSONResponse
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
 PLUGINS_DIR_LIST = [str(pathlib.Path.home() / ".miniclaw" / "plugins"), "plugins"]
 PLUGINS: list[object] = []
 SESSIONS: set[str] = set()
 pathlib.Path(SETTINGS_FILE).parent.mkdir(parents=True, exist_ok=True)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+if not pathlib.Path(SETTINGS_FILE).exists():
+    pathlib.Path(SETTINGS_FILE).write_text("{}", encoding="utf-8")
 
 
 # 加载插件

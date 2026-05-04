@@ -20,14 +20,14 @@ async def load_agents():
     return ""
 
 
-@ROUTER.get("/agents")
+@ROUTER.get("/agent")
 async def get_agents():
     return {
         "content": await load_agents()
     }
 
 
-@ROUTER.post("/agents")
+@ROUTER.post("/agent")
 async def save_agents(content: str = Body(...)):
     agents_file = anyio.Path(AGENTS_FILE_LIST[0])
     await agents_file.write_text(content, encoding="utf-8")
