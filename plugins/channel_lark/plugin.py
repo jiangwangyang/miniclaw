@@ -14,7 +14,7 @@ from lark_oapi.api.im.v1 import *
 SETTINGS_FILE = "data/settings.json"
 CHAT_URL = "http://localhost:11223/chat"
 INTERRUPT_URL = "http://localhost:11223/interrupt"
-message_queue = queue.Queue(maxsize=10)
+MESSAGE_QUEUE = queue.Queue(maxsize=10)
 lark_app_id = ""
 lark_app_secret = ""
 
@@ -48,7 +48,7 @@ def message_consumer():
     while True:
         try:
             # 获取飞书消息
-            feishu_message = message_queue.get(timeout=1)
+            feishu_message = MESSAGE_QUEUE.get(timeout=1)
             open_id = feishu_message.event.sender.sender_id.open_id
             user_content = feishu_message.event.message.content
             # 发送到模型
@@ -64,7 +64,7 @@ def message_consumer():
             text = response.json().get("text", "")
             send_feishu_message(open_id, text)
             # 处理完成
-            message_queue.task_done()
+            MESSAGE_QUEUE.task_done()
         except queue.Empty:
             pass
         except Exception as e:
@@ -78,7 +78,7 @@ def event_listener():
         open_id = data.event.sender.sender_id.open_id
         response = requests.post(f"{INTERRUPT_URL}/{open_id}")
         response.raise_for_status()
-        message_queue.put(data)
+        MESSAGE_QUEUE.put(data)
 
     event_handler = lark.EventDispatcherHandler.builder("", "") \
         .register_p2_im_message_receive_v1(do_p2_im_message_receive_v1) \
@@ -101,6 +101,7 @@ async def lifespan(**kwargs):
         settings = {}
     lark_app_id, lark_app_secret = settings.get("lark_app_id", ""), settings.get("lark_app_secret", "")
     if not lark_app_id or not lark_app_secret:
+        yield
         return
     # 启动 消费者线程 消息监听线程
     message_consumer_thread = threading.Thread(target=message_consumer, args=())

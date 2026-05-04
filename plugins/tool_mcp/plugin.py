@@ -10,13 +10,13 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
 SETTINGS_FILE = "data/settings.json"
-tool_session_dict: dict[str, ClientSession] = {}
-mcp_tools: list[Tool] = []
-mcp_dict_tools: list[dict] = []
-router: APIRouter = APIRouter()
+TOOL_SESSION_DICT: dict[str, ClientSession] = {}
+MCP_TOOLS: list[Tool] = []
+MCP_DICT_TOOLS: list[dict] = []
+ROUTER = APIRouter()
 
 
-@router.post("/mcp/tool/list")
+@ROUTER.post("/mcp/tool/list")
 async def get_mcp_tools(body: dict = Body(...)):
     proto_type = body.get("type")
     async with AsyncExitStack() as stack:
@@ -53,9 +53,9 @@ async def register_mcp_client(name, proto_type, **kwargs):
         # 获取工具列表
         tools_resp = await session.list_tools()
         for tool in tools_resp.tools:
-            tool_session_dict[tool.name] = session
-        mcp_tools.extend(tools_resp.tools)
-        mcp_dict_tools.extend([{
+            TOOL_SESSION_DICT[tool.name] = session
+        MCP_TOOLS.extend(tools_resp.tools)
+        MCP_DICT_TOOLS.extend([{
             "name": tool.name,
             "description": tool.description,
             "input_schema": tool.inputSchema,
@@ -70,7 +70,7 @@ async def register_mcp_client(name, proto_type, **kwargs):
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
     # 注册路由
-    app.include_router(router)
+    app.include_router(ROUTER)
     # 加载设置
     settings_file = anyio.Path(SETTINGS_FILE)
     if await settings_file.exists():
@@ -94,7 +94,7 @@ async def lifespan(app: FastAPI, **kwargs):
                     logging.warning(f"Unknown MCP server type: {server.get('type')}")
             except Exception as e:
                 logging.error(f"Error registering {name}: {e}")
-        logging.info(f"MCP plugin started, having {len(mcp_dict_tools)} MCP tools: {json.dumps(mcp_dict_tools)}")
+        logging.info(f"MCP plugin started, having {len(MCP_DICT_TOOLS)} MCP tools: {json.dumps(MCP_DICT_TOOLS)}")
         # 等待
         yield
         # 结束
@@ -102,17 +102,17 @@ async def lifespan(app: FastAPI, **kwargs):
 
 
 async def before_chat(tools: list, **kwargs):
-    tools += mcp_dict_tools
+    tools += MCP_DICT_TOOLS
 
 
 # 执行工具
 async def before_tool(messages: list, tool_call: dict, **kwargs):
     tool_name = tool_call["name"]
     args = tool_call["input"]
-    if tool_name not in tool_session_dict:
+    if tool_name not in TOOL_SESSION_DICT:
         return
     try:
-        tool_result = await tool_session_dict[tool_name].call_tool(tool_name, args)
+        tool_result = await TOOL_SESSION_DICT[tool_name].call_tool(tool_name, args)
         tool_content = str(tool_result.content)
         is_error = tool_result.isError
     except Exception as e:

@@ -9,7 +9,7 @@ import anyio
 from fastapi import FastAPI, APIRouter, Path, HTTPException
 
 DB_FILE = "data/session.db"
-router: APIRouter = APIRouter(prefix="/session")
+ROUTER = APIRouter(prefix="/session")
 
 
 # 初始化数据库
@@ -44,7 +44,7 @@ async def init_db():
 
 
 # 获取所有会话列表
-@router.get("/list")
+@ROUTER.get("/list")
 async def get_sessions():
     async with aiosqlite.connect(DB_FILE) as db:
         db.row_factory = aiosqlite.Row
@@ -66,7 +66,7 @@ async def get_sessions():
 
 
 # 获取单个会话详情
-@router.get("/{id}")
+@ROUTER.get("/{id}")
 async def get_session(session_id: str = Path(..., alias="id")):
     async with aiosqlite.connect(DB_FILE) as db:
         db.row_factory = aiosqlite.Row
@@ -94,7 +94,7 @@ async def get_session(session_id: str = Path(..., alias="id")):
 
 
 # 删除会话
-@router.delete("/{id}")
+@ROUTER.delete("/{id}")
 async def delete_session(session_id: str = Path(..., alias="id")):
     async with aiosqlite.connect(DB_FILE) as db:
         # 由于外键设置了 ON DELETE CASCADE，只需删除会话记录
@@ -106,7 +106,7 @@ async def delete_session(session_id: str = Path(..., alias="id")):
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
     await init_db()
-    app.include_router(router)
+    app.include_router(ROUTER)
     logging.info("Session plugin started")
     yield
     logging.info("Session plugin stopped")

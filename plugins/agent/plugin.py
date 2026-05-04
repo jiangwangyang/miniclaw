@@ -7,7 +7,7 @@ import anyio
 from fastapi import APIRouter, Body, FastAPI
 
 AGENTS_FILE_LIST = ["AGENTS.md", str(pathlib.Path.home() / ".agents" / "AGENTS.md")]
-router: APIRouter = APIRouter()
+ROUTER = APIRouter()
 
 
 async def load_agents():
@@ -20,14 +20,14 @@ async def load_agents():
     return ""
 
 
-@router.get("/agents")
+@ROUTER.get("/agents")
 async def get_agents():
     return {
         "content": await load_agents()
     }
 
 
-@router.post("/agents")
+@ROUTER.post("/agents")
 async def save_agents(content: str = Body(...)):
     agents_file = anyio.Path("AGENTS.md")
     await agents_file.write_text(content, encoding="utf-8")
@@ -35,7 +35,7 @@ async def save_agents(content: str = Body(...)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
-    app.include_router(router)
+    app.include_router(ROUTER)
     logging.info("Agent plugin started")
     yield
     logging.info("Agent plugin stopped")

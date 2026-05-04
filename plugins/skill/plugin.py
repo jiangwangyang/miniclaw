@@ -7,8 +7,8 @@ import anyio
 from fastapi import APIRouter, Path, Body, FastAPI
 
 SKILLS_DIR_LIST = ["external_skills/", "skills/", str(pathlib.Path.home() / ".agents" / "skills")]
-SKILLS: list[dict[str, str]] = []
-router: APIRouter = APIRouter()
+SKILLS: list[dict] = []
+ROUTER = APIRouter()
 
 
 async def load_skills():
@@ -46,12 +46,12 @@ async def load_skills():
     logging.info(f"Loaded {len(SKILLS)} skills: {json.dumps(SKILLS, ensure_ascii=False)}")
 
 
-@router.get("/skill/list")
+@ROUTER.get("/skill/list")
 async def get_skill_list():
     return SKILLS
 
 
-@router.get("/skill/{name}")
+@ROUTER.get("/skill/{name}")
 async def get_skill(name: str = Path(...)):
     filtered_skills = [skill for skill in SKILLS if skill["name"] == name]
     if not filtered_skills:
@@ -68,7 +68,7 @@ async def get_skill(name: str = Path(...)):
     }
 
 
-@router.post("/skill/{name}")
+@ROUTER.post("/skill/{name}")
 async def save_skill(name: str = Path(...), description: str = Body(...), content: str = Body(...)):
     skill_dir = anyio.Path("external_skills") / name
     await skill_dir.mkdir(parents=True, exist_ok=True)
@@ -80,7 +80,7 @@ async def save_skill(name: str = Path(...), description: str = Body(...), conten
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
     await load_skills()
-    app.include_router(router)
+    app.include_router(ROUTER)
     logging.info("Skill plugin started")
     yield
     logging.info("Skill plugin stopped")

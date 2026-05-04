@@ -10,11 +10,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, APIRouter, HTTPException
 from pydantic import BaseModel
 
-CHAT_URL = "http://localhost:11223/chat"
 pathlib.Path("data").mkdir(parents=True, exist_ok=True)
-scheduler: AsyncIOScheduler = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url="sqlite:///data/tasks.db")})
-async_client: httpx.AsyncClient = httpx.AsyncClient()
-router: APIRouter = APIRouter(prefix="/task")
+CHAT_URL = "http://localhost:11223/chat"
+SCHEDULER = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url="sqlite:///data/tasks.db")})
+ASYNC_CLIENT = httpx.AsyncClient()
+ROUTER = APIRouter(prefix="/task")
 
 
 class TaskEntity(BaseModel):
@@ -37,7 +37,7 @@ async def execute_task(task_id: str, name: str, content: str):
         "workdir": "/tmp",
         "stream": False
     }
-    response = await async_client.post(url, json=body)
+    response = await ASYNC_CLIENT.post(url, json=body)
     response.raise_for_status()
 
 
@@ -59,57 +59,57 @@ def job_to_dict(job) -> dict:
     }
 
 
-@router.get("/list")
+@ROUTER.get("/list")
 async def list_tasks():
-    jobs = scheduler.get_jobs()
+    jobs = SCHEDULER.get_jobs()
     return [job_to_dict(job) for job in jobs]
 
 
-@router.post("")
+@ROUTER.post("")
 async def save_task(task: TaskEntity):
     task_id = str(uuid.uuid4())
-    scheduler.add_job(execute_task, "cron", id=task_id, name=task.name, args=[task_id, task.name, task.content], year=task.year, month=task.month, day=task.day, week=task.week, day_of_week=task.day_of_week, hour=task.hour, minute=task.minute, second=task.second)
+    SCHEDULER.add_job(execute_task, "cron", id=task_id, name=task.name, args=[task_id, task.name, task.content], year=task.year, month=task.month, day=task.day, week=task.week, day_of_week=task.day_of_week, hour=task.hour, minute=task.minute, second=task.second)
 
 
-@router.delete("/{task_id}")
+@ROUTER.delete("/{task_id}")
 async def delete_task_by_id(task_id: str):
-    job = scheduler.get_job(task_id)
+    job = SCHEDULER.get_job(task_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    scheduler.remove_job(task_id)
+    SCHEDULER.remove_job(task_id)
 
 
-@router.post("/{task_id}/enable")
+@ROUTER.post("/{task_id}/enable")
 async def enable_task_by_id(task_id: str):
-    job = scheduler.get_job(task_id)
+    job = SCHEDULER.get_job(task_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    scheduler.resume_job(task_id)
+    SCHEDULER.resume_job(task_id)
 
 
-@router.post("/{task_id}/disable")
+@ROUTER.post("/{task_id}/disable")
 async def disable_task_by_id(task_id: str):
-    job = scheduler.get_job(task_id)
+    job = SCHEDULER.get_job(task_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    scheduler.pause_job(task_id)
+    SCHEDULER.pause_job(task_id)
 
 
-@router.post("/{task_id}/run")
+@ROUTER.post("/{task_id}/run")
 async def run_task_now(task_id: str):
-    job = scheduler.get_job(task_id)
+    job = SCHEDULER.get_job(task_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    scheduler.modify_job(job.id, next_run_time=datetime.now())
+    SCHEDULER.modify_job(job.id, next_run_time=datetime.now())
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
-    if not scheduler.running:
-        scheduler.start()
-    app.include_router(router)
+    if not SCHEDULER.running:
+        SCHEDULER.start()
+    app.include_router(ROUTER)
     logging.info("Scheduler plugin started, scheduler running")
     yield
-    if scheduler.running:
-        scheduler.shutdown()
+    if SCHEDULER.running:
+        SCHEDULER.shutdown()
     logging.info("Scheduler plugin stopped")

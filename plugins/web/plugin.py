@@ -11,15 +11,15 @@ from starlette.staticfiles import StaticFiles
 TMP_DIR = "/tmp"
 SETTINGS_FILE = "data/settings.json"
 STATIC_DIR = str(pathlib.Path(__file__).parent / "static")
-router = APIRouter()
+ROUTER = APIRouter()
 
 
-@router.get("/")
+@ROUTER.get("/")
 async def index():
     return RedirectResponse(url="/static/chat.html")
 
 
-@router.get("/dir/list")
+@ROUTER.get("/dir/list")
 async def list_directory(path: str = Query(...)):
     # 如果没有传入路径，默认使用tmp目录
     if path:
@@ -41,7 +41,7 @@ async def list_directory(path: str = Query(...)):
     }
 
 
-@router.get("/setting")
+@ROUTER.get("/setting")
 async def get_settings():
     settings_file = anyio.Path(SETTINGS_FILE)
     if not await settings_file.exists():
@@ -50,7 +50,7 @@ async def get_settings():
     return json.loads(content)
 
 
-@router.post("/setting")
+@ROUTER.post("/setting")
 async def save_settings(content: str = Body(...)):
     settings_file = anyio.Path(SETTINGS_FILE)
     await settings_file.parent.mkdir(parents=True, exist_ok=True)
@@ -61,7 +61,7 @@ async def save_settings(content: str = Body(...)):
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    app.include_router(router)
+    app.include_router(ROUTER)
     logging.info("Web plugin started")
     yield
     logging.info("Web plugin stopped")

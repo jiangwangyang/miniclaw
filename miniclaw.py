@@ -5,7 +5,6 @@ import sys
 from contextlib import asynccontextmanager, AsyncExitStack
 
 import anyio
-import httpx
 from anthropic import AsyncAnthropic, AsyncStream
 from anthropic.types.raw_message_stream_event import RawMessageStreamEvent
 from fastapi import FastAPI, Path, Body, Query
@@ -74,7 +73,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
     if await anyio.Path(SETTINGS_FILE).exists():
         settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8"))
     model = settings.get("model", "")
-    client: AsyncAnthropic = AsyncAnthropic(base_url=settings.get("base_url"), api_key=settings.get("api_key"), http_client=httpx.AsyncClient(verify=False))
+    client: AsyncAnthropic = AsyncAnthropic(base_url=settings.get("base_url"), api_key=settings.get("api_key"))
 
     while True:
         # before model
