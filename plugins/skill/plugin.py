@@ -4,15 +4,15 @@ import pathlib
 from contextlib import asynccontextmanager
 
 import anyio
-from fastapi import APIRouter, Path, Body, FastAPI
+from fastapi import APIRouter, Path, Body, FastAPI, HTTPException
 
 SKILLS_DIR_LIST = [str(pathlib.Path.home() / ".miniclaw" / "skills"), "skills", str(pathlib.Path.home() / ".agents" / "skills")]
-SKILLS: list[dict] = []
+SKILL_DICT: dict[str, dict] = {}
 ROUTER = APIRouter()
 
 
 async def load_skills():
-    SKILLS.clear()
+    skills = []
     loaded_skill_names = set()
     # 遍历技能目录
     for skills_dir in SKILLS_DIR_LIST:
@@ -41,31 +41,24 @@ async def load_skills():
                 elif line.startswith("description:"):
                     description = line[12:].strip()
             if name == skill_dir.name:
-                SKILLS.append({"name": name, "description": description, "path": str(await skill_file.absolute())})
+                content = text.split("---\n", 2)[2].strip()
+                skills += [{"name": name, "description": description, "path": str(await skill_file.absolute()), "content": content}]
                 loaded_skill_names.add(name)
-    logging.info(f"Loaded {len(SKILLS)} skills: {json.dumps(SKILLS, ensure_ascii=False)}")
+    return skills
 
 
 @ROUTER.get("/skill/list")
 async def get_skill_list():
-    return SKILLS
+    return await load_skills()
 
 
 @ROUTER.get("/skill/{name}")
 async def get_skill(name: str = Path(...)):
-    filtered_skills = [skill for skill in SKILLS if skill["name"] == name]
-    if not filtered_skills:
-        return {}
-    skill = filtered_skills[0]
-    skill_file = anyio.Path(skill["path"])
-    content = await skill_file.read_text(encoding="utf-8")
-    content = content.split("---\n", 2)[2].strip()
-    return {
-        "name": skill["name"],
-        "description": skill["description"],
-        "path": skill["path"],
-        "content": content,
-    }
+    skills = await load_skills()
+    for skill in skills:
+        if name == skill["name"]:
+            return skill
+    raise HTTPException(status_code=404, detail="Skill not found")
 
 
 @ROUTER.post("/skill/{name}")
@@ -79,13 +72,52 @@ async def save_skill(name: str = Path(...), description: str = Body(...), conten
 
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
-    await load_skills()
+    skills = await load_skills()
+    for skill in skills:
+        SKILL_DICT[skill["name"]] = skill
+    logging.info(f"Skill plugin started, Loaded {len(SKILL_DICT)} skills: {", ".join(SKILL_DICT.keys())}")
     app.include_router(ROUTER)
-    logging.info("Skill plugin started")
     yield
     logging.info("Skill plugin stopped")
 
 
-async def before_chat(agents: list, **kwargs):
-    if agents:
-        agents[0] += f"---\nAvailable Skills: {json.dumps(SKILLS, ensure_ascii=False)}\n---\n\n"
+async def before_chat(tools: list, **kwargs):
+    tools += [{
+        "name": "read_skill",
+        "description": f"Read skill detail. Skills: {json.dumps([{"name": skill["name"], "description": skill["description"]} for skill in SKILL_DICT.values()], ensure_ascii=False)}",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "skill name or other file in the skill like skill_name/dir/file.md"
+                }
+            },
+            "required": ["name"]
+        }
+    }]
+
+
+# 执行工具
+async def before_tool(messages: list, tool_call: dict, **kwargs):
+    if tool_call["name"] != "read_skill":
+        return
+    name = tool_call["input"].get("name", "").replace("\\", "/")
+    if name in SKILL_DICT:
+        tool_content = SKILL_DICT[name]["content"]
+        is_error = False
+    elif name.split("/")[0] in SKILL_DICT:
+        skill_file = anyio.Path(SKILL_DICT[name.split("/")[0]]["path"]).parent.parent / name
+        if await skill_file.is_file():
+            tool_content = await skill_file.read_text(encoding="utf-8")
+            is_error = False
+        elif await skill_file.is_dir():
+            tool_content = json.dumps([child async for child in skill_file.iterdir()], ensure_ascii=False)
+            is_error = False
+        else:
+            tool_content = "Cannot find skill file"
+            is_error = True
+    else:
+        tool_content = "Cannot find skill"
+        is_error = True
+    messages[-1]["content"] += [{"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}]
