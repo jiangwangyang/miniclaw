@@ -1,49 +1,72 @@
 import asyncio
-import json
 import logging
 import platform
 import sys
 from asyncio import subprocess
 from contextlib import asynccontextmanager
 
-PYTHON_TOOL = {
-    "name": "python",
-    "description": f"Execute python code. Python version: {platform.python_version()}.",
+PYTHON_CMD_TOOL = {
+    "name": "python_cmd",
+    "description": f"Run python program passed in as string. Python version: {platform.python_version()}.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "code": {
+            "cmd": {
                 "type": "string",
-                "description": "python code"
+                "description": "python command"
             }
         },
-        "required": ["code"]
+        "required": ["cmd"]
     }
-
+}
+PYTHON_FILE_TOOL = {
+    "name": "python_file",
+    "description": f"Run python program read from script file. Python version: {platform.python_version()}.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "file": {
+                "type": "string",
+                "description": "python file path"
+            },
+            "args": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "arguments passed to program in sys.argv[1:]"
+            }
+        },
+        "required": ["file"]
+    }
 }
 
 
 @asynccontextmanager
 async def lifespan(**kwargs):
-    logging.info(f"Python tool plugin started, having python tool: {json.dumps(PYTHON_TOOL, ensure_ascii=False)}")
+    logging.info("Python tool plugin started, having 2 tools: python_cmd, python_file")
     yield
     logging.info("Python tool plugin stopped")
 
 
 async def before_chat(tools: list, **kwargs):
-    tools += [PYTHON_TOOL]
+    tools += [PYTHON_CMD_TOOL, PYTHON_FILE_TOOL]
 
 
 async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):
-    if tool_call["name"] != "python":
-        return
     try:
-        python_code = tool_call["input"].get("code", "")
-        process = await asyncio.create_subprocess_exec(sys.executable, "-c", python_code, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=work_dir)
+        if tool_call["name"] == "python_cmd":
+            python_cmd = tool_call["input"].get("cmd", "")
+            process = await asyncio.create_subprocess_exec(sys.executable, "-c", python_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=work_dir)
+        elif tool_call["name"] == "python_file":
+            python_file = tool_call["input"].get("file", "")
+            args = tool_call["input"].get("args", [])
+            process = await asyncio.create_subprocess_exec(sys.executable, python_file, *args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=work_dir)
+        else:
+            return
         stdout, stderr = await process.communicate()
-        stdout, stderr = stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace")
-        tool_content = f"{stdout}{stderr}"
-        is_error = True if stderr else False
+        tool_content = f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
+        is_error = process.returncode != 0
     except Exception as e:
         tool_content = f"Error: {e}"
         is_error = True

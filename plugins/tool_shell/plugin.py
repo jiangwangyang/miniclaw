@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import platform
 import sys
@@ -28,7 +27,7 @@ async def lifespan(**kwargs):
         logging.info("Shell tool plugin not supported on Windows")
         yield
     else:
-        logging.info(f"Shell tool plugin started, having shell tool: {json.dumps(SHELL_TOOL, ensure_ascii=False)}")
+        logging.info("Shell tool plugin started, having 1 tool: shell")
         yield
         logging.info("Shell tool plugin stopped")
 
@@ -45,9 +44,8 @@ async def before_tool(messages: list, tool_call: dict, work_dir: str, **kwargs):
         command = tool_call["input"].get("command", "")
         process = await asyncio.create_subprocess_shell(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=work_dir)
         stdout, stderr = await process.communicate()
-        stdout, stderr = stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace")
-        tool_content = f"{stdout}{stderr}"
-        is_error = True if stderr else False
+        tool_content = f"{stdout.decode("utf-8", errors="replace")}{stderr.decode("utf-8", errors="replace")}"
+        is_error = process.returncode != 0
     except Exception as e:
         tool_content = f"Error: {e}"
         is_error = True

@@ -24,7 +24,7 @@ if not pathlib.Path(SETTINGS_FILE).exists():
 
 # 加载插件
 async def load_plugins():
-    PLUGINS.clear()
+    plugins = []
     loaded_plugin_names = set()
     # 遍历插件目录
     for plugins_dir in PLUGINS_DIR_LIST:
@@ -44,11 +44,12 @@ async def load_plugins():
             module_name = f"{plugin_dir.name}.plugin"
             try:
                 module = importlib.import_module(module_name)
-                PLUGINS.append(module)
+                plugins += [module]
                 loaded_plugin_names.add(plugin_dir.name)
             except Exception as e:
                 logging.error(f"加载插件 {plugin_dir.name} 失败: {e}")
-    logging.info(f"Loaded {len(PLUGINS)} plugins: {PLUGINS}")
+    logging.info(f"Loaded {len(loaded_plugin_names)} plugins: {", ".join(loaded_plugin_names)}")
+    return plugins
 
 
 # 执行插件钩子函数
@@ -157,7 +158,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    await load_plugins()
+    PLUGINS.extend(await load_plugins())
     async with AsyncExitStack() as stack:
         for module in PLUGINS:
             if hasattr(module, "lifespan"):
