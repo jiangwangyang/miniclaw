@@ -12,8 +12,7 @@ from mcp.client.streamable_http import streamablehttp_client
 
 SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
 TOOL_SESSION_DICT: dict[str, ClientSession] = {}
-MCP_TOOLS: list[Tool] = []
-MCP_DICT_TOOLS: list[dict] = []
+TOOL_DICT: dict[str, Tool] = {}
 ROUTER = APIRouter()
 
 
@@ -55,12 +54,7 @@ async def register_mcp_client(name, proto_type, **kwargs):
         tools_resp = await session.list_tools()
         for tool in tools_resp.tools:
             TOOL_SESSION_DICT[tool.name] = session
-        MCP_TOOLS.extend(tools_resp.tools)
-        MCP_DICT_TOOLS.extend([{
-            "name": tool.name,
-            "description": tool.description,
-            "input_schema": tool.inputSchema,
-        } for tool in tools_resp.tools])
+            TOOL_DICT[tool.name] = tool
         logging.info(f"MCP client {name} started, having {len(tools_resp.tools)} tools: {json.dumps(tools_resp.tools, ensure_ascii=False, default=lambda o: o.__dict__)}")
         # 等待
         yield
@@ -92,10 +86,10 @@ async def lifespan(app: FastAPI, **kwargs):
                 elif server.get("type") == "stdio":
                     await stack.enter_async_context(register_mcp_client(name, "stdio", command=server.get("command"), args=server.get("args")))
                 else:
-                    logging.warning(f"Unknown MCP server type: {server.get('type')}")
+                    logging.warning(f"Unknown MCP server type: {server.get("type")}")
             except Exception as e:
                 logging.error(f"Error registering {name}: {e}")
-        logging.info(f"MCP plugin started, having {len(MCP_DICT_TOOLS)} MCP tools: {json.dumps(MCP_DICT_TOOLS)}")
+        logging.info(f"MCP plugin started, having {len(TOOL_DICT)} tools: {", ".join(TOOL_DICT.keys())}")
         # 等待
         yield
         # 结束
@@ -103,17 +97,43 @@ async def lifespan(app: FastAPI, **kwargs):
 
 
 async def before_chat(tools: list, **kwargs):
-    tools += MCP_DICT_TOOLS
+    tools += [{
+        "name": "read_mcp_tool",
+        "description": f"Read MCP tool input schema. MCP tools: {json.dumps([{"name": tool.name, "description": tool.description} for tool in TOOL_DICT.values()], ensure_ascii=False)}",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "mcp tool name"
+                }
+            },
+            "required": ["name"]
+        }
+    }]
 
 
-# 执行工具
 async def before_tool(messages: list, tool_call: dict, **kwargs):
-    tool_name = tool_call["name"]
-    args = tool_call["input"]
-    if tool_name not in TOOL_SESSION_DICT:
+    # 执行 read_mcp_tool
+    if tool_call["name"] == "read_mcp_tool":
+        tool_name = tool_call["input"].get("name", "")
+        if tool_name not in TOOL_DICT:
+            tool_content = "Cannot find mcp tool"
+            is_error = True
+        else:
+            tool_content = json.dumps({
+                "name": tool_name,
+                "description": TOOL_DICT[tool_name].description,
+                "input_schema": TOOL_DICT[tool_name].inputSchema
+            }, ensure_ascii=False)
+            is_error = False
+        messages[-1]["content"] += [{"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}]
+        return
+    # 执行 mcp tool
+    if tool_call["name"] not in TOOL_SESSION_DICT:
         return
     try:
-        tool_result = await TOOL_SESSION_DICT[tool_name].call_tool(tool_name, args)
+        tool_result = await TOOL_SESSION_DICT[tool_call["name"]].call_tool(tool_call["name"], tool_call["input"])
         tool_content = str(tool_result.content)
         is_error = tool_result.isError
     except Exception as e:
