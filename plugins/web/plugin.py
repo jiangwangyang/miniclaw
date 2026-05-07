@@ -1,15 +1,13 @@
-import json
 import logging
 import pathlib
 from contextlib import asynccontextmanager
 
 import anyio
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Body
+from fastapi import FastAPI, APIRouter, HTTPException, Query
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
 TMP_DIR = "/tmp"
-SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
 STATIC_DIR = str(pathlib.Path(__file__).parent / "static")
 ROUTER = APIRouter()
 
@@ -39,23 +37,6 @@ async def list_directory(path: str = Query(...)):
         "parent_path": str(await target_path.parent.absolute()),
         "directories": sorted(directories, key=lambda x: x['name'])
     }
-
-
-@ROUTER.get("/setting")
-async def get_settings():
-    settings_file = anyio.Path(SETTINGS_FILE)
-    if not await settings_file.exists():
-        return {}
-    content = await settings_file.read_text(encoding="utf-8")
-    return json.loads(content)
-
-
-@ROUTER.post("/setting")
-async def save_settings(content: str = Body(...)):
-    settings_file = anyio.Path(SETTINGS_FILE)
-    await settings_file.parent.mkdir(parents=True, exist_ok=True)
-    content = json.dumps(json.loads(content), ensure_ascii=False, indent=4)
-    await settings_file.write_text(content, encoding="utf-8")
 
 
 @asynccontextmanager
