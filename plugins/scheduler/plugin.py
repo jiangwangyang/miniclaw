@@ -4,6 +4,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 
+import anyio
 import httpx
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -12,7 +13,6 @@ from pydantic import BaseModel
 
 CHAT_URL = "http://localhost:11223/chat"
 DB_FILE = str(pathlib.Path.home() / ".miniclaw" / "tasks.db")
-pathlib.Path(DB_FILE).parent.mkdir(parents=True, exist_ok=True)
 SCHEDULER = AsyncIOScheduler(jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///{DB_FILE}")})
 ASYNC_CLIENT = httpx.AsyncClient()
 ROUTER = APIRouter(prefix="/task")
@@ -106,6 +106,7 @@ async def run_task_now(task_id: str):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI, **kwargs):
+    await anyio.Path(DB_FILE).parent.mkdir(parents=True, exist_ok=True)
     if not SCHEDULER.running:
         SCHEDULER.start()
     app.include_router(ROUTER)
