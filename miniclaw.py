@@ -4,42 +4,38 @@ import logging
 import pathlib
 import sys
 from contextlib import asynccontextmanager, AsyncExitStack
+from types import ModuleType
 
 import anyio
 from anthropic import AsyncAnthropic, AsyncStream
 from anthropic.types.raw_message_stream_event import RawMessageStreamEvent
 from fastapi import FastAPI, Path, Body, Query
 from fastapi.responses import StreamingResponse
+from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionChunk
 from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
-PLUGINS_DIR_LIST = [str(pathlib.Path.home() / ".miniclaw" / "plugins"), "plugins"]
-PLUGINS: list[object] = []
-SESSIONS: set[str] = set()
-pathlib.Path(SETTINGS_FILE).parent.mkdir(parents=True, exist_ok=True)
-if not pathlib.Path(SETTINGS_FILE).exists():
-    pathlib.Path(SETTINGS_FILE).write_text("{}", encoding="utf-8")
 
 
 # 加载插件
-async def load_plugins():
+def load_plugins():
     plugins = []
     loaded_plugin_names = set()
     # 遍历插件目录
     for plugins_dir in PLUGINS_DIR_LIST:
-        plugins_dir = anyio.Path(plugins_dir)
-        if not await plugins_dir.exists() or not await plugins_dir.is_dir():
+        plugins_dir = pathlib.Path(plugins_dir)
+        if not plugins_dir.exists() or not plugins_dir.is_dir():
             continue
         # 加入插件目录到 sys.path
         if plugins_dir not in sys.path:
             sys.path.append(str(plugins_dir))
         # 加载插件
-        async for plugin_dir in plugins_dir.iterdir():
+        for plugin_dir in plugins_dir.iterdir():
             if plugin_dir.name in loaded_plugin_names:
                 continue
             plugin_path = plugins_dir / plugin_dir.name / "plugin.py"
-            if not await plugin_path.is_file():
+            if not plugin_path.is_file():
                 continue
             module_name = f"{plugin_dir.name}.plugin"
             try:
@@ -52,6 +48,13 @@ async def load_plugins():
     return plugins
 
 
+# 常量
+SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
+PLUGINS_DIR_LIST = [str(pathlib.Path.home() / ".miniclaw" / "plugins"), "plugins"]
+PLUGINS: list[ModuleType] = load_plugins()
+SESSIONS: set[str] = set()
+
+
 # 执行插件钩子函数
 async def execute_plugins(action: str, **kwargs):
     for module in PLUGINS:
@@ -61,6 +64,48 @@ async def execute_plugins(action: str, **kwargs):
                 await action_function(**kwargs)
             except Exception as e:
                 logging.error(f"执行插件 {module.__name__} 的 {action} 钩子函数失败: {e}")
+
+
+# anthropic 消息转化为 openai 消息列表
+def convert_anthropic_to_openai_messages(system_prompt: str, anthropic_messages: list):
+    openai_messages = [{"role": "system", "content": system_prompt}]
+    for anthropic_msg in anthropic_messages:
+        if anthropic_msg["role"] == "user" and isinstance(anthropic_msg["content"], str):
+            openai_messages += [{"role": "user", "content": anthropic_msg["content"]}]
+        elif anthropic_msg["role"] == "user":
+            openai_messages += [{"role": "tool", "tool_call_id": content_block["tool_use_id"], "content": content_block["content"]} for content_block in anthropic_msg["content"]]
+        else:
+            openai_msg = {"role": "assistant", "content": "", "tool_calls": []}
+            for content_block in anthropic_msg["content"]:
+                if content_block["type"] == "thinking":
+                    openai_msg["content"] += f"<think>{content_block["thinking"]}</think>\n\n"
+                elif content_block["type"] == "text":
+                    openai_msg["content"] += content_block["text"]
+                elif content_block["type"] == "tool_use":
+                    openai_msg["tool_calls"] += [{
+                        "id": content_block["id"],
+                        "type": "function",
+                        "function": {
+                            "name": content_block["name"],
+                            "arguments": json.dumps(content_block["input"], ensure_ascii=False)
+                        }
+                    }]
+                else:
+                    raise RuntimeError(f"Unknown content type: {content_block["type"]}")
+            openai_messages += [openai_msg]
+    return openai_messages
+
+
+# anthropic 工具转为 openai 工具列表
+def convert_anthropic_to_openai_tools(anthropic_tools: list):
+    return [{
+        "type": "function",
+        "function": {
+            "name": tool["name"],
+            "description": tool["description"],
+            "parameters": tool["input_schema"]
+        }
+    } for tool in anthropic_tools]
 
 
 # 模型对话
@@ -77,52 +122,90 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
     settings = {}
     if await anyio.Path(SETTINGS_FILE).exists():
         settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8"))
+    api = settings.get("api", "anthropic")
     model = settings.get("model", "")
-    client: AsyncAnthropic = AsyncAnthropic(base_url=settings.get("base_url"), api_key=settings.get("api_key"))
+    base_url = settings.get("base_url", "")
+    api_key = settings.get("api_key", "")
+    anthropic_client: AsyncAnthropic = AsyncAnthropic(base_url=base_url, api_key=api_key)
+    openai_client: AsyncOpenAI = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     while True:
         # before model
         await execute_plugins(action="before_model", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools)
 
-        # 1. 发送请求
-        response: AsyncStream[RawMessageStreamEvent] = await client.messages.create(messages=messages, tools=tools, system=agents[0], model=model, max_tokens=1 << 18, stream=True)
+        # 1. 发送 anthropic 请求
+        if api == "anthropic":
+            response: AsyncStream[RawMessageStreamEvent] = await anthropic_client.messages.create(messages=messages, tools=tools, system=agents[0], model=model, max_tokens=1 << 17, stream=True)
+            assistant_block_list = []
+            async for event in response:
+                if not session_id in SESSIONS:
+                    assistant_block_list[:] = [_ for _ in assistant_block_list if _["type"] != "tool_use"]
+                    break
+                if event.type == "content_block_start":
+                    if event.content_block.type == "thinking":
+                        assistant_block_list += [{"type": "thinking", "thinking": "", "signature": ""}]
+                        yield f"data: {json.dumps({"type": "thinking", "text": ""}, ensure_ascii=False)}\n\n"
+                    elif event.content_block.type == "text":
+                        assistant_block_list += [{"type": "text", "text": ""}]
+                        yield f"data: {json.dumps({"type": "text", "text": ""}, ensure_ascii=False)}\n\n"
+                    elif event.content_block.type == "tool_use":
+                        assistant_block_list += [{"type": "tool_use", "id": event.content_block.id, "name": event.content_block.name, "input": ""}]
+                        yield f"data: {json.dumps({"type": "tool_use", "text": f"{event.content_block.name}: "}, ensure_ascii=False)}\n\n"
+                    else:
+                        raise Exception
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "thinking_delta":
+                        assistant_block_list[-1]["thinking"] += event.delta.thinking
+                        yield f"data: {json.dumps({"type": "delta", "text": event.delta.thinking}, ensure_ascii=False)}\n\n"
+                    elif event.delta.type == "signature_delta":
+                        assistant_block_list[-1]["signature"] += event.delta.signature
+                    elif event.delta.type == "text_delta":
+                        assistant_block_list[-1]["text"] += event.delta.text
+                        yield f"data: {json.dumps({"type": "delta", "text": event.delta.text}, ensure_ascii=False)}\n\n"
+                    elif event.delta.type == "input_json_delta":
+                        assistant_block_list[-1]["input"] += event.delta.partial_json
+                        yield f"data: {json.dumps({"type": "delta", "text": event.delta.partial_json}, ensure_ascii=False)}\n\n"
+                    else:
+                        raise Exception
+                elif event.type == "content_block_stop":
+                    if assistant_block_list[-1]["type"] == "tool_use":
+                        assistant_block_list[-1]["input"] = json.loads(assistant_block_list[-1]["input"])
+            messages += [{"role": "assistant", "content": assistant_block_list}]
 
-        # 2. 收集内容
-        assistant_block_list = []
-        messages += [{"role": "assistant", "content": assistant_block_list}]
-        async for event in response:
-            if not session_id in SESSIONS:
-                assistant_block_list[:] = [_ for _ in assistant_block_list if _["type"] != "tool_use"]
-                break
-            if event.type == "content_block_start":
-                if event.content_block.type == "thinking":
-                    assistant_block_list += [{"type": "thinking", "thinking": "", "signature": ""}]
-                    yield f"data: {json.dumps({"type": "thinking", "text": ""}, ensure_ascii=False)}\n\n"
-                elif event.content_block.type == "text":
-                    assistant_block_list += [{"type": "text", "text": ""}]
-                    yield f"data: {json.dumps({"type": "text", "text": ""}, ensure_ascii=False)}\n\n"
-                elif event.content_block.type == "tool_use":
-                    assistant_block_list += [{"type": "tool_use", "id": event.content_block.id, "name": event.content_block.name, "input": ""}]
-                    yield f"data: {json.dumps({"type": "tool_use", "text": f"{event.content_block.name}: "}, ensure_ascii=False)}\n\n"
-                else:
-                    raise Exception
-            elif event.type == "content_block_delta":
-                if event.delta.type == "thinking_delta":
-                    assistant_block_list[-1]["thinking"] += event.delta.thinking
-                    yield f"data: {json.dumps({"type": "delta", "text": event.delta.thinking}, ensure_ascii=False)}\n\n"
-                elif event.delta.type == "signature_delta":
-                    assistant_block_list[-1]["signature"] += event.delta.signature
-                elif event.delta.type == "text_delta":
-                    assistant_block_list[-1]["text"] += event.delta.text
-                    yield f"data: {json.dumps({"type": "delta", "text": event.delta.text}, ensure_ascii=False)}\n\n"
-                elif event.delta.type == "input_json_delta":
-                    assistant_block_list[-1]["input"] += event.delta.partial_json
-                    yield f"data: {json.dumps({"type": "delta", "text": event.delta.partial_json}, ensure_ascii=False)}\n\n"
-                else:
-                    raise Exception
-            elif event.type == "content_block_stop":
-                if assistant_block_list[-1]["type"] == "tool_use":
-                    assistant_block_list[-1]["input"] = json.loads(assistant_block_list[-1]["input"])
+        # 2. 发送 openai 请求
+        elif api == "chat":
+            openai_messages = convert_anthropic_to_openai_messages(agents[0], messages)
+            openai_tools = convert_anthropic_to_openai_tools(tools)
+            print(messages)
+            print(openai_messages)
+            print(openai_tools)
+            response: AsyncStream[ChatCompletionChunk] = await openai_client.chat.completions.create(messages=openai_messages, tools=openai_tools, model=model, max_tokens=1 << 17, stream=True)
+            content = ""
+            tool_calls = []
+            yield f"data: {json.dumps({"type": "text", "text": ""}, ensure_ascii=False)}\n\n"
+            async for chunk in response:
+                if not session_id in SESSIONS:
+                    tool_calls.clear()
+                    break
+                for choice in chunk.choices:
+                    delta = choice.delta
+                    if delta.content:
+                        content += delta.content
+                        yield f"data: {json.dumps({"type": "delta", "text": delta.content}, ensure_ascii=False)}\n\n"
+                    for tool_call in delta.tool_calls or []:
+                        if tool_call.index == len(tool_calls):
+                            tool_calls += [{"id": tool_call.id, "type": "function", "function": {"name": tool_call.function.name, "arguments": tool_call.function.arguments or ""}}]
+                            yield f"data: {json.dumps({"type": "tool_use", "text": f"{tool_call.function.name}: {tool_call.function.arguments or ""}"}, ensure_ascii=False)}\n\n"
+                        elif tool_call.index < len(tool_calls):
+                            tool_calls[tool_call.index]["function"]["arguments"] += tool_call.function.arguments or ""
+                            yield f"data: {json.dumps({"type": "delta", "text": tool_call.function.arguments or ""}, ensure_ascii=False)}\n\n"
+                        else:
+                            raise RuntimeError(f"Tool index larger than current tool call length: {tool_call.index} {len(tool_calls)}")
+            assistant_block_list = [{"type": "text", "text": content}, *[{"type": "tool_use", "id": tool_call["id"], "name": tool_call["function"]["name"], "input": json.loads(tool_call["function"]["arguments"])} for tool_call in tool_calls]]
+            messages += [{"role": "assistant", "content": assistant_block_list}]
+
+        else:
+            raise RuntimeError(f"Unknown api type: {api}")
 
         # after model
         await execute_plugins(action="after_model", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools)
@@ -158,14 +241,16 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    PLUGINS.extend(await load_plugins())
     async with AsyncExitStack() as stack:
         for module in PLUGINS:
             if hasattr(module, "lifespan"):
                 try:
                     await stack.enter_async_context(module.lifespan(app=_app))
                 except Exception as e:
-                    logging.error(f"执行插件 {module.__name__} 的 lifespan 钩子函数失败: {e}")
+                    if hasattr(e, 'exceptions'):
+                        logging.error(f"执行插件 {module.__name__} 的 lifespan 钩子函数失败: {e.exceptions}")
+                    else:
+                        logging.error(f"执行插件 {module.__name__} 的 lifespan 钩子函数失败: {e}")
         yield
 
 
