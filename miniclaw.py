@@ -19,39 +19,29 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 
 # 加载插件
-def load_plugins():
-    plugins = []
-    loaded_plugin_names = set()
-    # 遍历插件目录
-    for plugins_dir in PLUGINS_DIR_LIST:
-        plugins_dir = pathlib.Path(plugins_dir)
-        if not plugins_dir.exists() or not plugins_dir.is_dir():
+def load_plugins(plugins_dir_list: list):
+    plugins, loaded = [], set()
+    for dir_path in map(pathlib.Path, plugins_dir_list):
+        if not dir_path.is_dir():
             continue
-        # 加入插件目录到 sys.path
-        if plugins_dir not in sys.path:
-            sys.path.append(str(plugins_dir))
-        # 加载插件
-        for plugin_dir in plugins_dir.iterdir():
-            if plugin_dir.name in loaded_plugin_names:
+        if dir_path not in sys.path:
+            sys.path.append(str(dir_path))
+        for subdir in dir_path.iterdir():
+            if subdir.name in loaded or not (subdir / "plugin.py").is_file():
                 continue
-            plugin_path = plugins_dir / plugin_dir.name / "plugin.py"
-            if not plugin_path.is_file():
-                continue
-            module_name = f"{plugin_dir.name}.plugin"
             try:
-                module = importlib.import_module(module_name)
-                plugins += [module]
-                loaded_plugin_names.add(plugin_dir.name)
+                plugins += [importlib.import_module(f"{subdir.name}.plugin")]
+                loaded.add(subdir.name)
             except Exception as e:
-                logging.error(f"加载插件 {plugin_dir.name} 失败: {e}")
-    logging.info(f"Loaded {len(loaded_plugin_names)} plugins: {", ".join(loaded_plugin_names)}")
+                logging.error(f"加载插件 {subdir.name} 失败: {e}")
+    logging.info(f"Loaded {len(loaded)} plugins: {", ".join(loaded)}")
     return plugins
 
 
 # 常量
 SETTINGS_FILE = str(pathlib.Path.home() / ".miniclaw" / "settings.json")
 PLUGINS_DIR_LIST = [str(pathlib.Path.home() / ".miniclaw" / "plugins"), "plugins"]
-PLUGINS: list[ModuleType] = load_plugins()
+PLUGINS: list[ModuleType] = load_plugins(PLUGINS_DIR_LIST)
 SESSIONS: set[str] = set()
 
 
@@ -75,14 +65,14 @@ def convert_anthropic_to_openai_messages(system_prompt: str, anthropic_messages:
         elif anthropic_msg["role"] == "user":
             openai_messages += [{"role": "tool", "tool_call_id": content_block["tool_use_id"], "content": content_block["content"]} for content_block in anthropic_msg["content"]]
         else:
-            openai_msg = {"role": "assistant", "content": "", "tool_calls": []}
+            content, tool_calls = "", []
             for content_block in anthropic_msg["content"]:
                 if content_block["type"] == "thinking":
-                    openai_msg["content"] += f"<think>{content_block["thinking"]}</think>\n\n"
+                    content += f"<think>{content_block["thinking"]}</think>\n\n"
                 elif content_block["type"] == "text":
-                    openai_msg["content"] += content_block["text"]
+                    content += content_block["text"]
                 elif content_block["type"] == "tool_use":
-                    openai_msg["tool_calls"] += [{
+                    tool_calls += [{
                         "id": content_block["id"],
                         "type": "function",
                         "function": {
@@ -92,7 +82,7 @@ def convert_anthropic_to_openai_messages(system_prompt: str, anthropic_messages:
                     }]
                 else:
                     raise RuntimeError(f"Unknown content type: {content_block["type"]}")
-            openai_messages += [openai_msg]
+            openai_messages += [{"role": "assistant", "content": content, "tool_calls": tool_calls}]
     return openai_messages
 
 
@@ -119,13 +109,8 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
     await execute_plugins(action="before_chat", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, user_content=user_content)
 
     # 初始化客户端
-    settings = {}
-    if await anyio.Path(SETTINGS_FILE).exists():
-        settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8"))
-    api = settings.get("api", "anthropic")
-    model = settings.get("model", "")
-    base_url = settings.get("base_url", "")
-    api_key = settings.get("api_key", "")
+    settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")) if await anyio.Path(SETTINGS_FILE).exists() else {}
+    api, model, base_url, api_key = settings.get("api", "anthropic"), settings.get("model", ""), settings.get("base_url", ""), settings.get("api_key", "")
     anthropic_client: AsyncAnthropic = AsyncAnthropic(base_url=base_url, api_key=api_key)
     openai_client: AsyncOpenAI = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
@@ -176,12 +161,8 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
         elif api == "chat":
             openai_messages = convert_anthropic_to_openai_messages(agents[0], messages)
             openai_tools = convert_anthropic_to_openai_tools(tools)
-            print(messages)
-            print(openai_messages)
-            print(openai_tools)
             response: AsyncStream[ChatCompletionChunk] = await openai_client.chat.completions.create(messages=openai_messages, tools=openai_tools, model=model, max_tokens=1 << 17, stream=True)
-            content = ""
-            tool_calls = []
+            content, tool_calls = "", []
             yield f"data: {json.dumps({"type": "text", "text": ""}, ensure_ascii=False)}\n\n"
             async for chunk in response:
                 if not session_id in SESSIONS:
