@@ -88,7 +88,10 @@ async def lifespan(app: FastAPI, **kwargs):
                 else:
                     logging.warning(f"Unknown MCP server type: {server.get("type")}")
             except Exception as e:
-                logging.error(f"Error registering {name}: {e}")
+                if hasattr(e, 'exceptions'):
+                    logging.error(f"Error registering {name}: {e.exceptions}")
+                else:
+                    logging.error(f"Error registering {name}: {e}")
         logging.info(f"MCP plugin started, having {len(TOOL_DICT)} tools: {", ".join(TOOL_DICT.keys())}")
         # 等待
         yield
