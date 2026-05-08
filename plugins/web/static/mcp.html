@@ -493,8 +493,7 @@
 <div id="status-toast"></div>
 
 <script>
-    let mcpServers = {};
-    let settings = {};
+    let mcp_servers = {};
     let editingKey = null;
 
     const serverListEl = document.getElementById('server-list');
@@ -553,8 +552,8 @@
         try {
             const response = await fetch('/setting');
             if (!response.ok) throw new Error('加载设置失败');
-            settings = await response.json();
-            mcpServers = settings.mcpServers || {};
+            const data = await response.json();
+            mcp_servers = data.mcp_servers || {};
             renderServerList();
         } catch (error) {
             console.error(error);
@@ -563,12 +562,11 @@
     }
 
     async function saveAllSettings() {
-        settings.mcpServers = mcpServers;
         try {
             const response = await fetch('/setting', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(JSON.stringify(settings)),
+                body: JSON.stringify({mcp_servers: mcp_servers}),
             });
 
             if (response.ok) {
@@ -583,7 +581,7 @@
     }
 
     function renderServerList() {
-        const keys = Object.keys(mcpServers);
+        const keys = Object.keys(mcp_servers);
         if (keys.length === 0) {
             serverListEl.innerHTML = `
                 <div class="empty-state">
@@ -595,7 +593,7 @@
         }
 
         serverListEl.innerHTML = keys.map(key => {
-            const server = mcpServers[key];
+            const server = mcp_servers[key];
             let typeTag = '';
             let endpoint = '';
 
@@ -640,7 +638,7 @@
 
     function editServer(key) {
         editingKey = key;
-        const server = mcpServers[key];
+        const server = mcp_servers[key];
         document.getElementById('modal-title').textContent = '编辑服务器';
         document.getElementById('server-name').value = key;
         document.getElementById('server-name').disabled = true;
@@ -661,7 +659,7 @@
 
     async function deleteServer(key) {
         if (confirm(`确定要删除服务器 "${key}" 吗？`)) {
-            delete mcpServers[key];
+            delete mcp_servers[key];
             const success = await saveAllSettings();
             if (success) {
                 renderServerList();
@@ -719,7 +717,7 @@
         confirmBtn.disabled = true;
         confirmBtn.textContent = '正在保存...';
 
-        mcpServers[key] = newServer;
+        mcp_servers[key] = newServer;
         const success = await saveAllSettings();
 
         confirmBtn.disabled = false;
@@ -733,7 +731,7 @@
     });
 
     async function testConnection(key) {
-        const server = mcpServers[key];
+        const server = mcp_servers[key];
         const toolsEl = document.getElementById(`tools-${key}`);
         const testBtn = document.getElementById(`test-btn-${key}`);
 
