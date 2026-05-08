@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>设置管理 - MiniClaw</title>
+    <title>系统设置 - MiniClaw</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
@@ -15,11 +15,30 @@
             --crisp-white: #ffffff;
             --bg-primary: #f9fafb;
             --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-input: #f3f4f6;
+            --bg-hover: #f1f3f5;
             --border-color: #e5e7eb;
-            --accent-color: #36454f;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --border-focus: #36454f;
+            --text-primary: #1a1d21;
+            --text-secondary: #708090;
+            --text-muted: #9ca3af;
+            --accent: #36454f;
+            --accent-hover: #2d3a43;
+            --accent-glow: rgba(54, 69, 79, 0.08);
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.08);
+            --radius: 10px;
+            --radius-sm: 6px;
+            --radius-lg: 14px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+            --font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --mono-font: 'Fira Code', 'SF Mono', 'Consolas', monospace;
+            --transition: 0.2s ease;
         }
 
         * {
@@ -29,16 +48,36 @@
         }
 
         body {
-            font-family: 'DM Sans', sans-serif;
+            font-family: var(--font);
             background: var(--bg-primary);
-            color: var(--charcoal);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
         }
 
-        /* Top Navigation - Unified with skill.html */
+        ::selection {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* ===== Navbar ===== */
         .navbar {
             height: 64px;
             background: var(--bg-secondary);
@@ -48,6 +87,8 @@
             justify-content: space-between;
             padding: 0 24px;
             z-index: 100;
+            position: sticky;
+            top: 0;
         }
 
         .nav-left {
@@ -74,422 +115,1612 @@
             color: var(--charcoal);
         }
 
+        .back-link svg {
+            width: 18px;
+            height: 18px;
+        }
+
         .nav-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 18px;
             font-weight: 700;
             letter-spacing: -0.5px;
+            color: var(--text-primary);
         }
 
-        .nav-actions {
+        .nav-right {
             display: flex;
+            align-items: center;
             gap: 12px;
         }
 
-        /* Status Pill */
-        .status-pill {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            background: var(--bg-primary);
-            color: var(--slate-gray);
-        }
-
-        .status-success {
-            color: #10b981;
-        }
-
-        .status-error {
-            color: #ef4444;
-        }
-
-        /* Main Content */
-        .main-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 32px;
-        }
-
-        .settings-card {
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 32px;
-            border: 1px solid var(--border-color);
-            max-width: 800px;
+        /* ===== Container ===== */
+        .container {
+            max-width: 860px;
             margin: 0 auto;
+            padding: 32px 24px 80px;
+        }
+
+        /* ===== Section ===== */
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .section-header .left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
 
         .section-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 24px;
-            color: var(--charcoal);
-            letter-spacing: -0.5px;
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .form-group {
-            margin-bottom: 24px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 700;
+        .section-title svg {
+            width: 20px;
+            height: 20px;
             color: var(--slate-gray);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
         }
 
-        .form-group .description {
+        .section-subtitle {
             font-size: 13px;
-            color: var(--slate-gray);
-            margin-bottom: 12px;
+            color: var(--text-muted);
         }
 
-        .form-group input {
+        /* ===== Model Selector ===== */
+        .model-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            transition: box-shadow var(--transition);
+        }
+
+        .model-selector:hover {
+            box-shadow: var(--shadow-sm);
+        }
+
+        .model-selector .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .model-selector select {
             width: 100%;
             padding: 12px 16px;
-            border-radius: 10px;
+            background: var(--bg-input);
             border: 1px solid var(--border-color);
-            font-family: 'Fira Code', monospace;
-            font-size: 14px;
-            transition: var(--transition);
-            background: var(--bg-primary);
-            color: var(--charcoal);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font);
+            font-size: 15px;
+            cursor: pointer;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23708090' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
         }
 
-        .form-group input:focus {
+        .model-selector select:focus {
             outline: none;
-            border-color: var(--charcoal);
-            box-shadow: 0 0 0 3px rgba(54, 69, 79, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .model-selector select option {
             background: var(--bg-secondary);
+            color: var(--text-primary);
         }
 
-        .form-group input::placeholder {
-            color: var(--slate-gray);
-            opacity: 0.6;
+        .model-selector .current-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
         }
 
-        .advanced-toggle {
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border-color);
-            text-align: center;
+        .model-selector .current-info .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-color);
+            flex-shrink: 0;
         }
 
-        .advanced-toggle button {
+        .model-selector .current-info .dot.active {
+            background: var(--success);
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+        }
+
+        /* ===== Quick Providers ===== */
+        .quick-providers {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .quick-btn {
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .quick-btn:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .quick-btn .provider-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            flex-shrink: 0;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .quick-btn .provider-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .quick-btn .provider-info .name {
+            font-weight: 600;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .quick-btn .provider-info .hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ===== Provider Buttons (like quick-btn) ===== */
+        .provider-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .provider-btn {
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .provider-btn:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .provider-btn .provider-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            flex-shrink: 0;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .provider-btn .provider-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .provider-btn .provider-info .name {
+            font-weight: 600;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .provider-btn .provider-info .hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            animation: fadeIn 0.2s ease-out;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-dialog {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 640px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: none;
             border: none;
-            color: var(--slate-gray);
-            font-size: 13px;
-            font-weight: 600;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-size: 20px;
             cursor: pointer;
-            transition: var(--transition);
-            padding: 8px 16px;
-            border-radius: 8px;
+            transition: all var(--transition);
         }
 
-        .advanced-toggle button:hover {
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+        }
+
+        .modal-body::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
             background: var(--bg-primary);
-            color: var(--charcoal);
         }
 
-        #advanced-editor {
-            display: none;
-            margin-top: 24px;
+        .modal-footer .right-btns {
+            display: flex;
+            gap: 10px;
         }
 
-        #advanced-editor textarea {
-            width: 100%;
-            height: 300px;
-            padding: 16px;
-            border-radius: 10px;
+        /* ===== Provider Card (inside modal) ===== */
+        .modal-provider-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .modal-provider-fields .field-full {
+            grid-column: 1 / -1;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .field-group label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .field-group input,
+        .field-group select {
+            padding: 10px 12px;
+            background: var(--bg-input);
             border: 1px solid var(--border-color);
-            font-family: 'Fira Code', monospace;
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font);
             font-size: 13px;
-            resize: vertical;
-            background: var(--bg-primary);
-            color: var(--charcoal);
+            transition: border-color var(--transition), box-shadow var(--transition);
+        }
+
+        .field-group input:focus,
+        .field-group select:focus {
             outline: none;
-            line-height: 1.6;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
-        #advanced-editor textarea:focus {
-            border-color: var(--charcoal);
-            background: var(--bg-secondary);
+        .field-group input::placeholder {
+            color: var(--text-muted);
+            font-size: 12px;
         }
 
-        /* Buttons */
+        .field-group select {
+            cursor: pointer;
+        }
+
+        .field-group .input-wrapper {
+            position: relative;
+        }
+
+        .field-group .input-wrapper input {
+            width: 100%;
+            padding-right: 40px;
+        }
+
+        .field-group .toggle-vis {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+            font-size: 16px;
+            transition: color var(--transition);
+        }
+
+        .field-group .toggle-vis:hover {
+            color: var(--text-primary);
+        }
+
+        /* ===== Models Tags ===== */
+        .models-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 6px 0;
+            min-height: 32px;
+        }
+
+        .model-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            background: var(--accent-glow);
+            border: 1px solid rgba(54, 69, 79, 0.15);
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--accent);
+            font-weight: 500;
+            font-family: var(--mono-font);
+        }
+
+        .model-tag .remove {
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            opacity: 0.5;
+            transition: opacity var(--transition);
+        }
+
+        .model-tag .remove:hover {
+            opacity: 1;
+        }
+
+        .model-input-wrap {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .model-input-wrap input {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--mono-font);
+            font-size: 13px;
+        }
+
+        .model-input-wrap input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .model-input-wrap input::placeholder {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* ===== Buttons ===== */
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 14px;
+            gap: 6px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: var(--font);
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: var(--transition);
-            border: 1px solid transparent;
+            transition: all var(--transition);
         }
 
         .btn-primary {
-            background: var(--charcoal);
-            color: white;
+            background: var(--accent);
+            color: #fff;
         }
 
         .btn-primary:hover {
-            background: #2d3a43;
+            background: var(--accent-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.06);
+            border-color: var(--danger);
+        }
+
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+        }
+
+        /* ===== Add Provider ===== */
+        .add-provider-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px;
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all var(--transition);
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            justify-content: center;
+            margin-top: 14px;
+        }
+
+        .add-provider-bar:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .add-provider-bar svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ===== Advanced JSON ===== */
+        .advanced-section {
+            margin-top: 8px;
+        }
+
+        .advanced-section details {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: box-shadow var(--transition);
+        }
+
+        .advanced-section details:hover {
+            box-shadow: var(--shadow-sm);
+        }
+
+        .advanced-section details summary {
+            padding: 14px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            user-select: none;
+            transition: color var(--transition);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .advanced-section details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .advanced-section details summary::before {
+            content: '\25B6';
+            font-size: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .advanced-section details[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+        .advanced-section details summary:hover {
+            color: var(--text-primary);
+        }
+
+        .advanced-section details[open] summary {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .advanced-section textarea {
+            width: 100%;
+            min-height: 240px;
+            padding: 16px;
+            background: #f8f9fb;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--mono-font);
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            tab-size: 2;
+        }
+
+        .advanced-section textarea:focus {
+            outline: none;
+        }
+
+        .advanced-section .json-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border-color);
+            justify-content: flex-end;
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 99999;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: all 0.3s ease;
+            pointer-events: none;
             box-shadow: var(--shadow-md);
         }
 
-        .btn-primary:disabled {
-            background: var(--light-gray);
-            cursor: not-allowed;
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .toast.success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
         }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
+        .toast.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: #e2e8f0;
-            border-radius: 10px;
+        .toast.info {
+            background: #f0f5ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #cbd5e1;
+        /* ===== Empty State ===== */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
         }
 
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            opacity: 0.25;
+            margin-bottom: 12px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        /* ===== Provider icon colors ===== */
+        .provider-icon-color-0 {
+            background: linear-gradient(135deg, #4F46E5, #6366F1);
+            color: #fff;
+        }
+
+        .provider-icon-color-1 {
+            background: linear-gradient(135deg, #1677FF, #4096FF);
+            color: #fff;
+        }
+
+        .provider-icon-color-2 {
+            background: linear-gradient(135deg, #FF6B35, #FF8C5A);
+            color: #fff;
+        }
+
+        .provider-icon-color-3 {
+            background: linear-gradient(135deg, #00B96B, #00D97A);
+            color: #fff;
+        }
+
+        .provider-icon-color-4 {
+            background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+            color: #fff;
+        }
+
+        .provider-icon-color-5 {
+            background: linear-gradient(135deg, #EC4899, #F472B6);
+            color: #fff;
+        }
+
+        .provider-icon-color-6 {
+            background: linear-gradient(135deg, #F59E0B, #FBBF24);
+            color: #fff;
+        }
+
+        .provider-icon-color-7 {
+            background: linear-gradient(135deg, #10B981, #34D399);
+            color: #fff;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 640px) {
+            .navbar {
+                padding: 0 16px;
             }
-            to {
-                transform: rotate(360deg);
+
+            .container {
+                padding: 20px 16px 60px;
+            }
+
+            .quick-providers {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .provider-buttons {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .modal-provider-fields {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-dialog {
+                max-height: 90vh;
+            }
+
+            .nav-title {
+                font-size: 16px;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .modal-footer .right-btns {
+                width: 100%;
+            }
+
+            .modal-footer .right-btns .btn {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .modal-footer .btn-danger {
+                width: 100%;
+                justify-content: center;
             }
         }
 
-        .spin {
-            animation: spin 1s linear infinite;
+        @media (max-width: 400px) {
+            .quick-providers {
+                grid-template-columns: 1fr;
+            }
+
+            .provider-buttons {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
 
+<!-- ===== Navbar ===== -->
 <nav class="navbar">
     <div class="nav-left">
-        <a href="/" class="back-link">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <a href="/" class="back-link" aria-label="返回首页">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
             返回
         </a>
-        <div class="nav-title">系统设置</div>
+        <span class="nav-title">系统设置</span>
     </div>
-    <div class="nav-actions">
-        <span id="status-msg" class="status-pill" style="display: none;"></span>
-        <button id="save-btn" class="btn btn-primary">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                <polyline points="7 3 7 8 15 8"></polyline>
-            </svg>
-            保存设置
-        </button>
+    <div class="nav-right">
     </div>
 </nav>
 
-<div class="main-container">
-    <div class="settings-card">
-        <h2 class="section-title">API 配置</h2>
+<!-- ===== Main Container ===== -->
+<div class="container">
 
-        <div class="form-group">
-            <label for="base_url">Base URL</label>
-            <p class="description">API 的基础请求地址，定义模型服务的访问入口。</p>
-            <input type="text" id="base_url" placeholder="https://api.openai.com/v1" spellcheck="false">
+    <!-- ===== 1. 当前使用的模型 ===== -->
+    <div class="section">
+        <div class="section-header">
+            <div class="left">
+                <div class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                    当前使用的模型
+                </div>
+                <div class="section-subtitle">从已配置的模型提供方中选择要使用的模型</div>
+            </div>
         </div>
-
-        <div class="form-group">
-            <label for="api_key">API Key</label>
-            <p class="description">用于身份验证的密钥，请妥善保管。</p>
-            <input type="password" id="api_key" placeholder="在此输入您的 API 密钥" spellcheck="false">
+        <div class="model-selector">
+            <div class="label">选择模型</div>
+            <select id="modelSelect" onchange="saveSettings()">
+                <option value="">— 请先添加模型提供方 —</option>
+            </select>
+            <div class="current-info">
+                <span class="dot" id="statusDot"></span>
+                <span id="statusText">暂无模型配置</span>
+            </div>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label for="model">模型名称</label>
-            <p class="description">指定要使用的模型标识符（如 gpt-4o, claude-3-5-sonnet 等）。</p>
-            <input type="text" id="model" placeholder="model-name" spellcheck="false">
+    <!-- ===== 2. 模型提供方配置列表 ===== -->
+    <div class="section">
+        <div class="section-header">
+            <div class="left">
+                <div class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                    </svg>
+                    模型提供方配置
+                </div>
+                <div class="section-subtitle">管理所有 AI 模型提供方，点击按钮编辑详细配置</div>
+            </div>
         </div>
-
-        <div class="advanced-toggle">
-            <button id="toggle-advanced">显示高级 JSON 编辑器</button>
+        <div id="providersContainer"></div>
+        <div class="add-provider-bar" onclick="addEmptyProvider()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 8v8"></path>
+                <path d="M8 12h8"></path>
+            </svg>
+            + 添加自定义提供方
         </div>
+    </div>
 
-        <div id="advanced-editor">
-            <div class="form-group">
-                <label for="settings-json">原始 JSON</label>
-                <p class="description">高级配置项，直接编辑 settings.json 的内容。修改后需切换回此视图以确保同步。</p>
-                <textarea id="settings-json" spellcheck="false"></textarea>
+    <!-- ===== 3. 快速添加默认提供方 ===== -->
+    <div class="section">
+        <div class="section-header">
+            <div class="left">
+                <div class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 8v8"></path>
+                        <path d="M8 12h8"></path>
+                    </svg>
+                    快速添加默认提供方
+                </div>
+                <div class="section-subtitle">点击一键添加，点击后弹出窗口填写 API Key</div>
+            </div>
+        </div>
+        <div class="quick-providers">
+            <button class="quick-btn" onclick="addQuickProvider('deepseek')">
+                <div class="provider-icon" style="background:linear-gradient(135deg,#4F46E5,#6366F1);color:#fff;">D</div>
+                <div class="provider-info">
+                    <span class="name">DeepSeek</span>
+                    <span class="hint">api.deepseek.com</span>
+                </div>
+            </button>
+            <button class="quick-btn" onclick="addQuickProvider('zhipu')">
+                <div class="provider-icon" style="background:linear-gradient(135deg,#1677FF,#4096FF);color:#fff;">智</div>
+                <div class="provider-info">
+                    <span class="name">智谱AI</span>
+                    <span class="hint">open.bigmodel.cn</span>
+                </div>
+            </button>
+            <button class="quick-btn" onclick="addQuickProvider('kimi')">
+                <div class="provider-icon" style="background:linear-gradient(135deg,#FF6B35,#FF8C5A);color:#fff;">K</div>
+                <div class="provider-info">
+                    <span class="name">Kimi</span>
+                    <span class="hint">api.moonshot.cn</span>
+                </div>
+            </button>
+            <button class="quick-btn" onclick="addQuickProvider('minimax')">
+                <div class="provider-icon" style="background:linear-gradient(135deg,#00B96B,#00D97A);color:#fff;">M</div>
+                <div class="provider-info">
+                    <span class="name">MiniMax</span>
+                    <span class="hint">api.minimax.chat</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== 4. 高级 JSON 编辑器 ===== -->
+    <div class="section advanced-section">
+        <details>
+            <summary>高级: JSON 编辑器</summary>
+            <textarea id="jsonEditor" spellcheck="false"></textarea>
+            <div class="json-actions">
+                <button class="btn btn-outline btn-sm" onclick="syncJsonFromUI()">从界面同步</button>
+                <button class="btn btn-primary btn-sm" onclick="applyAndSaveJson()">应用并保存</button>
+            </div>
+        </details>
+    </div>
+
+</div>
+
+<!-- ===== Modal for editing provider ===== -->
+<div class="modal-overlay" id="providerModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 id="modalTitle">编辑提供方</h3>
+            <button class="modal-close" onclick="closeProviderModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <div class="modal-provider-fields">
+                <div class="field-group">
+                    <label>提供方标识</label>
+                    <input type="text" id="modalKeyInput" placeholder="如: my-provider"/>
+                </div>
+                <div class="field-group">
+                    <label>显示名称</label>
+                    <input type="text" id="modalNameInput" placeholder="显示名称"/>
+                </div>
+                <div class="field-group">
+                    <label>API 类型</label>
+                    <select id="modalApiSelect"></select>
+                </div>
+                <div class="field-group">
+                    <label>Base URL</label>
+                    <input type="text" id="modalUrlInput" placeholder="https://api.example.com/v1"/>
+                </div>
+                <div class="field-group field-full">
+                    <label>API Key</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="modalKeySecretInput" placeholder="sk-..." autocomplete="off"/>
+                        <button class="toggle-vis" type="button">&#x1F441;</button>
+                    </div>
+                </div>
+                <div class="field-group field-full">
+                    <label>可用模型（输入模型名后按回车添加）</label>
+                    <div class="models-tags" id="modalModelsContainer"></div>
+                    <div class="model-input-wrap">
+                        <input type="text" id="modalModelInput" placeholder="输入模型名称后按回车..."/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger" id="modalDeleteBtn" onclick="deleteProviderFromModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                删除该提供方
+            </button>
+            <div class="right-btns">
+                <button class="btn btn-outline" onclick="closeProviderModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveModalProvider()">保存</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- ===== Toast ===== -->
+<div class="toast" id="toast"></div>
+
 <script>
-    let originalSettings = {};
-    const saveBtn = document.getElementById('save-btn');
-    const statusMsg = document.getElementById('status-msg');
-    const toggleAdvancedBtn = document.getElementById('toggle-advanced');
-    const advancedEditor = document.getElementById('advanced-editor');
-    const jsonTextarea = document.getElementById('settings-json');
-
-    const fields = ['base_url', 'api_key', 'model'];
-
-    function showStatus(message, isError = false) {
-        statusMsg.textContent = message;
-        statusMsg.className = isError ? 'status-pill status-error' : 'status-pill status-success';
-        statusMsg.style.display = 'block';
-        if (!isError) {
-            setTimeout(() => {
-                statusMsg.style.display = 'none';
-            }, 3000);
+    // ============================================================
+    //  Data & State
+    // ============================================================
+    var QUICK_PROVIDERS = {
+        deepseek: {
+            name: 'DeepSeek',
+            api: 'anthropic',
+            base_url: 'https://api.deepseek.com/anthropic',
+            models: ['deepseek-v4-flash', 'deepseek-v4-pro']
+        },
+        zhipu: {
+            name: '智谱AI',
+            api: 'chat',
+            base_url: 'https://open.bigmodel.cn/api/paas/v4',
+            models: ['glm-5.1', 'glm-5', 'glm-5-turbo']
+        },
+        kimi: {
+            name: 'Kimi',
+            api: 'chat',
+            base_url: 'https://api.moonshot.cn/v1',
+            models: ['kimi-k2.6']
+        },
+        minimax: {
+            name: 'MiniMax',
+            api: 'anthropic',
+            base_url: 'https://api.minimax.chat/anthropic',
+            models: ['MiniMax-M2.7']
         }
+    };
+
+    var API_TYPE_OPTIONS = [
+        {value: 'chat', label: 'chat (OpenAI)'},
+        {value: 'anthropic', label: 'anthropic'},
+    ];
+
+    var config = {
+        model: '',
+        model_provider: '',
+        model_providers: {}
+    };
+    var providerList = [];
+
+    // Modal state
+    var editingProviderKey = null;  // key of provider being edited
+    var isNewProvider = false;      // whether adding a new provider
+
+    // ============================================================
+    //  Toast
+    // ============================================================
+    var toastTimer = null;
+
+    function showToast(msg, type) {
+        if (type === undefined) type = 'info';
+        var el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className = 'toast ' + type + ' show';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            el.classList.remove('show');
+        }, 3000);
     }
 
+    // ============================================================
+    //  API
+    // ============================================================
     async function fetchSettings() {
         try {
-            const response = await fetch('/setting');
-            if (!response.ok) {
-                if (response.status === 404) {
-                    originalSettings = {};
-                    return;
-                }
-                throw new Error('无法加载设置');
-            }
-            originalSettings = await response.json();
-
-            // Populate basic fields
-            fields.forEach(field => {
-                const input = document.getElementById(field);
-                if (input) {
-                    input.value = originalSettings[field] || '';
-                }
-            });
-
-            // Populate advanced editor
-            jsonTextarea.value = JSON.stringify(originalSettings, null, 2);
-        } catch (error) {
-            console.error('Failed to fetch settings:', error);
-            showStatus('加载设置失败', true);
+            var resp = await fetch('/setting');
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            var data = await resp.json();
+            config = {
+                model: data.model || '',
+                model_provider: data.model_provider || '',
+                model_providers: data.model_providers || {}
+            };
+            providerList = Object.keys(config.model_providers);
+            renderProviderButtons();
+            renderModelSelector();
+            syncJsonFromUI();
+        } catch (e) {
+            console.error('Failed to load settings:', e);
+            showToast('加载设置失败: ' + e.message, 'error');
         }
     }
 
     async function saveSettings() {
-        let settingsToSave = {...originalSettings};
+        var payload = buildConfigFromUI();
+        try {
+            // POST only model, model_provider, model_providers fields
+            await fetch('/setting', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            showToast('配置已保存', 'success');
+            await fetchSettings()
+        } catch (e) {
+            showToast('保存失败: ' + e.message, 'error');
+            console.error('Save failed:', e);
+        }
+    }
 
-        // Always sync basic fields to the object
-        fields.forEach(field => {
-            const input = document.getElementById(field);
-            if (input) {
-                settingsToSave[field] = input.value.trim();
+    // ============================================================
+    //  Build config from UI
+    // ============================================================
+    function buildConfigFromUI() {
+        var modelSelect = document.getElementById('modelSelect');
+        var selectedVal = modelSelect.value;
+        var model = '';
+        var model_provider = '';
+        if (selectedVal) {
+            var parts = selectedVal.split('|');
+            model = parts[0];
+            model_provider = parts[1];
+        }
+
+        var providers = {};
+        providerList.forEach(function (key) {
+            var prov = config.model_providers[key];
+            if (prov) {
+                providers[key] = {
+                    name: prov.name,
+                    api: prov.api,
+                    base_url: prov.base_url,
+                    api_key: prov.api_key,
+                    models: prov.models.slice()
+                };
             }
         });
 
-        // If user is in advanced mode, take the JSON directly
-        if (advancedEditor.style.display === 'block') {
-            try {
-                settingsToSave = JSON.parse(jsonTextarea.value);
-            } catch (e) {
-                showStatus('JSON 格式不正确: ' + e.message, true);
+        return {model: model, model_provider: model_provider, model_providers: providers};
+    }
+
+    // ============================================================
+    //  Render: Model Selector
+    // ============================================================
+    function renderModelSelector() {
+        var select = document.getElementById('modelSelect');
+        var dot = document.getElementById('statusDot');
+        var statusText = document.getElementById('statusText');
+
+        var html = '<option value="">— 请选择模型 —</option>';
+        var hasModels = false;
+
+        providerList.forEach(function (key) {
+            var prov = config.model_providers[key];
+            if (!prov || !prov.models || prov.models.length === 0) return;
+            var label = prov.name || key;
+            prov.models.forEach(function (m) {
+                var val = m + '|' + key;
+                var selected = (config.model === m && config.model_provider === key) ? ' selected' : '';
+                html += '<option value="' + val + '"' + selected + '>' + label + ' / ' + m + '</option>';
+                hasModels = true;
+            });
+        });
+
+        if (!hasModels) {
+            html = '<option value="">— 请先添加模型提供方 —</option>';
+        }
+
+        select.innerHTML = html;
+
+        if (config.model && config.model_provider) {
+            var prov = config.model_providers[config.model_provider];
+            var label = prov ? (prov.name || config.model_provider) : config.model_provider;
+            dot.className = 'dot active';
+            statusText.textContent = '当前使用: ' + label + ' / ' + config.model;
+        } else {
+            dot.className = 'dot';
+            statusText.textContent = hasModels ? '请选择一个模型' : '暂无模型配置';
+        }
+    }
+
+    // ============================================================
+    //  Render: Provider Buttons
+    // ============================================================
+    function renderProviderButtons() {
+        var container = document.getElementById('providersContainer');
+
+        var html = '<div class="provider-buttons">';
+        providerList.forEach(function (key) {
+            var prov = config.model_providers[key] || {};
+            var name = prov.name || key;
+            var baseUrl = prov.base_url || '';
+            var colorClass = getProviderColorClass(name);
+            var initial = getProviderInitial(name);
+
+            html += '' +
+                '<button class="provider-btn" onclick="openProviderModal(\'' + key + '\')">' +
+                '  <div class="provider-icon ' + colorClass + '">' + initial + '</div>' +
+                '  <div class="provider-info">' +
+                '    <span class="name">' + escapeHtml(name) + '</span>' +
+                '    <span class="hint">' + escapeHtml(baseUrl || (prov.api || '')) + '</span>' +
+                '  </div>' +
+                '</button>';
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+    }
+
+    // ============================================================
+    //  Provider Icon Color
+    // ============================================================
+    function getProviderColorClass(name) {
+        var colors = [
+            'provider-icon-color-0',
+            'provider-icon-color-1',
+            'provider-icon-color-2',
+            'provider-icon-color-3',
+            'provider-icon-color-4',
+            'provider-icon-color-5',
+            'provider-icon-color-6',
+            'provider-icon-color-7'
+        ];
+        var hash = 0;
+        for (var i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    }
+
+    function getProviderInitial(name) {
+        if (!name) return '?';
+        return name.charAt(0).toUpperCase();
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ============================================================
+    //  Modal Provider Editing
+    // ============================================================
+    function openProviderModal(key) {
+        editingProviderKey = key;
+        isNewProvider = false;
+
+        var prov = config.model_providers[key];
+        if (!prov) return;
+
+        document.getElementById('modalTitle').textContent = '编辑: ' + (prov.name || key);
+
+        // Populate fields
+        populateModalFields(key, prov);
+
+        // Show delete button
+        document.getElementById('modalDeleteBtn').style.display = 'inline-flex';
+
+        // Show modal
+        document.getElementById('providerModal').classList.add('active');
+    }
+
+    function openNewProviderModal(key) {
+        editingProviderKey = key;
+        isNewProvider = true;
+
+        var prov = config.model_providers[key] || {name: '', api: 'chat', base_url: '', api_key: '', models: []};
+
+        document.getElementById('modalTitle').textContent = '添加提供方';
+
+        // Populate fields
+        populateModalFields(key, prov);
+
+        // Show modal
+        document.getElementById('providerModal').classList.add('active');
+    }
+
+    function populateModalFields(key, prov) {
+        // API type options
+        var apiSelect = document.getElementById('modalApiSelect');
+        var apiOptions = '';
+        API_TYPE_OPTIONS.forEach(function (opt) {
+            var sel = (opt.value === (prov.api || 'chat')) ? ' selected' : '';
+            apiOptions += '<option value="' + opt.value + '"' + sel + '>' + escapeHtml(opt.label) + '</option>';
+        });
+        apiSelect.innerHTML = apiOptions;
+
+        document.getElementById('modalKeyInput').value = key;
+        document.getElementById('modalNameInput').value = prov.name || '';
+        document.getElementById('modalUrlInput').value = prov.base_url || '';
+        document.getElementById('modalKeySecretInput').value = prov.api_key || '';
+
+        // Models
+        var container = document.getElementById('modalModelsContainer');
+        container.innerHTML = '';
+        (prov.models || []).forEach(function (m) {
+            var tag = document.createElement('span');
+            tag.className = 'model-tag';
+            tag.dataset.model = m;
+            tag.innerHTML = escapeHtml(m) + ' <span class="remove" onclick="removeModalModelTag(this)">\u00D7</span>';
+            container.appendChild(tag);
+        });
+
+        // Focus on API key for quick providers
+        if (!prov.api_key) {
+            setTimeout(function () {
+                document.getElementById('modalKeySecretInput').focus();
+            }, 300);
+        }
+    }
+
+    function closeProviderModal() {
+        document.getElementById('providerModal').classList.remove('active');
+        editingProviderKey = null;
+        isNewProvider = false;
+    }
+
+    function saveModalProvider() {
+        var key = document.getElementById('modalKeyInput').value.trim();
+        var name = document.getElementById('modalNameInput').value.trim() || key;
+        var api = document.getElementById('modalApiSelect').value;
+        var base_url = document.getElementById('modalUrlInput').value.trim();
+        var api_key = document.getElementById('modalKeySecretInput').value.trim();
+
+        // Collect models from tags
+        var models = [];
+        document.querySelectorAll('#modalModelsContainer .model-tag').forEach(function (tag) {
+            var m = tag.dataset.model;
+            if (m) models.push(m);
+        });
+
+        if (!key) {
+            showToast('请填写提供方标识', 'error');
+            return;
+        }
+        if (!base_url) {
+            showToast('请填写 Base URL', 'error');
+            return;
+        }
+        if (!api_key) {
+            showToast('请填写 API Key', 'error');
+            return;
+        }
+        if (models.length === 0) {
+            showToast('请至少添加一个模型', 'error');
+            return;
+        }
+
+        // If key changed, handle rename
+        var oldKey = editingProviderKey;
+        if (oldKey && oldKey !== key) {
+            // Remove old key, set new key
+            delete config.model_providers[oldKey];
+            var idx = providerList.indexOf(oldKey);
+            if (idx !== -1) {
+                providerList.splice(idx, 1);
+            }
+            // Update model_provider reference if needed
+            if (config.model_provider === oldKey) {
+                config.model_provider = key;
+            }
+        }
+
+        // Save to config
+        config.model_providers[key] = {
+            name: name,
+            api: api,
+            base_url: base_url,
+            api_key: api_key,
+            models: models
+        };
+
+        if (providerList.indexOf(key) === -1) {
+            providerList.push(key);
+        }
+
+        // Re-render
+        renderProviderButtons();
+        renderModelSelector();
+        closeProviderModal();
+        saveSettings();
+    }
+
+    function deleteProviderFromModal() {
+        var key = editingProviderKey;
+        if (!key) return;
+
+        if (!confirm('确定要删除提供方「' + (config.model_providers[key]?.name || key) + '」吗？')) return;
+
+        delete config.model_providers[key];
+        providerList = providerList.filter(function (k) {
+            return k !== key;
+        });
+
+        if (config.model_provider === key) {
+            config.model = '';
+            config.model_provider = '';
+        }
+
+        renderProviderButtons();
+        renderModelSelector();
+        closeProviderModal();
+        saveSettings();
+    }
+
+    // ============================================================
+    //  Modal Model Tags
+    // ============================================================
+    function addModalModelTag(modelName) {
+        var container = document.getElementById('modalModelsContainer');
+        var existing = container.querySelectorAll('.model-tag');
+        for (var i = 0; i < existing.length; i++) {
+            if (existing[i].dataset.model === modelName) {
+                showToast('模型已存在', 'error');
                 return;
             }
         }
 
-        saveBtn.disabled = true;
-        const originalBtnText = saveBtn.innerHTML;
-        saveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin"><circle cx="12" cy="12" r="10"></circle></svg> 保存中...`;
+        var tag = document.createElement('span');
+        tag.className = 'model-tag';
+        tag.dataset.model = modelName;
+        tag.innerHTML = escapeHtml(modelName) + ' <span class="remove" onclick="removeModalModelTag(this)">\u00D7</span>';
+        container.appendChild(tag);
+    }
 
+    function removeModalModelTag(el) {
+        var tag = el.closest('.model-tag');
+        if (tag) tag.remove();
+    }
+
+    // ============================================================
+    //  Provider Operations
+    // ============================================================
+    function addQuickProvider(type) {
+        var preset = QUICK_PROVIDERS[type];
+        if (!preset) return;
+
+        var key = type;
+        var counter = 1;
+        while (config.model_providers[key]) {
+            key = type + '_' + counter;
+            counter++;
+        }
+
+        config.model_providers[key] = {
+            name: preset.name,
+            api: preset.api,
+            base_url: preset.base_url,
+            api_key: '',
+            models: preset.models.slice()
+        };
+        providerList.push(key);
+
+        renderProviderButtons();
+        renderModelSelector();
+        syncJsonFromUI();
+
+        // Open modal for editing (fill in API key)
+        showToast('已添加 ' + preset.name + '，请在弹出窗口中填写 API Key', 'info');
+        openNewProviderModal(key);
+    }
+
+    function addEmptyProvider() {
+        var key = 'provider_' + Date.now();
+        config.model_providers[key] = {
+            name: '新提供方',
+            api: 'anthropic',
+            base_url: '',
+            api_key: '',
+            models: []
+        };
+        providerList.push(key);
+
+        renderProviderButtons();
+        renderModelSelector();
+        syncJsonFromUI();
+
+        // Open modal for editing
+        openNewProviderModal(key);
+    }
+
+    // ============================================================
+    //  JSON Editor
+    // ============================================================
+    function syncJsonFromUI() {
+        var uiConfig = buildConfigFromUI();
+        var editor = document.getElementById('jsonEditor');
+        editor.value = JSON.stringify(uiConfig, null, 2);
+    }
+
+    function applyAndSaveJson() {
+        var editor = document.getElementById('jsonEditor');
         try {
-            const response = await fetch('/setting', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(JSON.stringify(settingsToSave)),
-            });
-
-            if (response.ok) {
-                showStatus('设置已保存');
-                originalSettings = settingsToSave;
-                jsonTextarea.value = JSON.stringify(originalSettings, null, 2);
-
-                // Update basic fields if they were changed in JSON mode
-                fields.forEach(field => {
-                    const input = document.getElementById(field);
-                    if (input) {
-                        input.value = originalSettings[field] || '';
-                    }
-                });
-            } else {
-                const errData = await response.json();
-                throw new Error(errData.detail || '保存失败');
+            var parsed = JSON.parse(editor.value);
+            if (!parsed.model_providers || typeof parsed.model_providers !== 'object') {
+                throw new Error('缺少 model_providers 字段');
             }
-        } catch (error) {
-            console.error('Failed to save settings:', error);
-            showStatus('保存失败: ' + error.message, true);
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalBtnText;
+            config.model = parsed.model || '';
+            config.model_provider = parsed.model_provider || '';
+            config.model_providers = parsed.model_providers;
+            providerList = Object.keys(config.model_providers);
+            renderProviderButtons();
+            renderModelSelector();
+            // Auto-save after applying JSON edit
+            saveSettings();
+        } catch (e) {
+            showToast('JSON 格式错误: ' + e.message, 'error');
         }
     }
 
-    toggleAdvancedBtn.addEventListener('click', () => {
-        if (advancedEditor.style.display === 'none' || advancedEditor.style.display === '') {
-            advancedEditor.style.display = 'block';
-            toggleAdvancedBtn.textContent = '隐藏高级 JSON 编辑器';
-            // Sync form to JSON before showing
-            const current = {...originalSettings};
-            fields.forEach(field => {
-                current[field] = document.getElementById(field).value.trim();
-            });
-            jsonTextarea.value = JSON.stringify(current, null, 2);
-        } else {
-            // Sync JSON back to form if valid
-            try {
-                const current = JSON.parse(jsonTextarea.value);
-                fields.forEach(field => {
-                    const input = document.getElementById(field);
-                    if (input && current[field] !== undefined) {
-                        input.value = current[field];
-                    }
-                });
-            } catch (e) {
-                // Ignore invalid JSON on hide
+    // ============================================================
+    //  Initialization
+    // ============================================================
+    // Toggle password visibility in modal
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('toggle-vis')) {
+            var input = e.target.parentElement.querySelector('input');
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                e.target.textContent = '\uD83D\uDE48';
+            } else {
+                input.type = 'password';
+                e.target.textContent = '\uD83D\uDC41';
             }
-            advancedEditor.style.display = 'none';
-            toggleAdvancedBtn.textContent = '显示高级 JSON 编辑器';
         }
     });
 
-    saveBtn.addEventListener('click', saveSettings);
-
-    document.addEventListener('keydown', (e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-            e.preventDefault();
-            saveSettings();
+    // Modal model input enter key
+    document.addEventListener('DOMContentLoaded', function () {
+        var modelInput = document.getElementById('modalModelInput');
+        if (modelInput) {
+            modelInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    var val = this.value.trim();
+                    if (!val) return;
+                    addModalModelTag(val);
+                    this.value = '';
+                }
+            });
         }
     });
 
+    // Close modal on overlay click
+    document.getElementById('providerModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeProviderModal();
+        }
+    });
+
+    // Initial load
     fetchSettings();
 </script>
 </body>
