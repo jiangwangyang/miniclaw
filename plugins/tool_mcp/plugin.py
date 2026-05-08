@@ -68,12 +68,9 @@ async def lifespan(app: FastAPI, **kwargs):
     app.include_router(ROUTER)
     # 加载设置
     settings_file = anyio.Path(SETTINGS_FILE)
-    if await settings_file.exists():
-        settings_content = await settings_file.read_text(encoding="utf-8")
-        settings = json.loads(settings_content)
-    else:
-        settings = {}
-    mcp_servers = settings.get("mcpServers") or {}
+    settings_file_content = await settings_file.read_text(encoding="utf-8") if await settings_file.exists() else ""
+    settings = json.loads(settings_file_content) if settings_file_content else {}
+    mcp_servers = settings.get("mcp_servers", {})
     # 注册MCP客户端
     async with AsyncExitStack() as stack:
         # 创建MCP客户端
@@ -121,14 +118,9 @@ async def before_tool(messages: list, tool_call: dict, **kwargs):
     if tool_call["name"] == "read_mcp_tool":
         tool_name = tool_call["input"].get("name", "")
         if tool_name not in TOOL_DICT:
-            tool_content = "Cannot find mcp tool"
-            is_error = True
+            tool_content, is_error = "Cannot find mcp tool", True
         else:
-            tool_content = json.dumps({
-                "name": tool_name,
-                "description": TOOL_DICT[tool_name].description,
-                "input_schema": TOOL_DICT[tool_name].inputSchema
-            }, ensure_ascii=False)
+            tool_content = json.dumps({"name": tool_name, "description": TOOL_DICT[tool_name].description, "input_schema": TOOL_DICT[tool_name].inputSchema}, ensure_ascii=False)
             is_error = False
         messages[-1]["content"] += [{"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}]
         return
@@ -137,9 +129,7 @@ async def before_tool(messages: list, tool_call: dict, **kwargs):
         return
     try:
         tool_result = await TOOL_SESSION_DICT[tool_call["name"]].call_tool(tool_call["name"], tool_call["input"])
-        tool_content = str(tool_result.content)
-        is_error = tool_result.isError
+        tool_content, is_error = str(tool_result.content), tool_result.isError
     except Exception as e:
-        tool_content = f"Error: {e}"
-        is_error = True
+        tool_content, is_error = f"Error: {e}", True
     messages[-1]["content"] += [{"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}]
