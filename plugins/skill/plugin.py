@@ -12,16 +12,14 @@ ROUTER = APIRouter()
 
 
 async def load_skills():
-    skills = []
-    loaded_skill_names = set()
+    skills, loaded = [], set()
     # 遍历技能目录
-    for skills_dir in SKILLS_DIR_LIST:
-        skills_dir = anyio.Path(skills_dir)
+    for skills_dir in map(anyio.Path, SKILLS_DIR_LIST):
         if not await skills_dir.exists():
             continue
         # 遍历技能
         async for skill_dir in skills_dir.iterdir():
-            if skill_dir.name in loaded_skill_names:
+            if skill_dir.name in loaded:
                 continue
             skill_file = skill_dir / "SKILL.md"
             if not await skill_file.is_file():
@@ -33,8 +31,7 @@ async def load_skills():
                 second_index = lines.index("---", 1)
             else:
                 continue
-            name = ""
-            description = ""
+            name, description = "", ""
             for line in lines[1:second_index]:
                 if line.startswith("name:"):
                     name = line[5:].strip()
@@ -43,7 +40,7 @@ async def load_skills():
             if name == skill_dir.name:
                 content = text.split("---\n", 2)[2].strip()
                 skills += [{"name": name, "description": description, "path": str(await skill_file.absolute()), "content": content}]
-                loaded_skill_names.add(name)
+                loaded.add(name)
     return skills
 
 
@@ -115,9 +112,7 @@ async def before_tool(messages: list, tool_call: dict, **kwargs):
             tool_content = json.dumps([child async for child in skill_file.iterdir()], ensure_ascii=False)
             is_error = False
         else:
-            tool_content = "Cannot find skill file"
-            is_error = True
+            tool_content, is_error = "Cannot find skill file", True
     else:
-        tool_content = "Cannot find skill"
-        is_error = True
+        tool_content, is_error = "Cannot find skill", True
     messages[-1]["content"] += [{"type": "tool_result", "tool_use_id": tool_call["id"], "content": tool_content, "is_error": is_error}]

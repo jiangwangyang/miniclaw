@@ -11,12 +11,9 @@ ROUTER = APIRouter()
 
 
 async def load_agents():
-    for agents_file in AGENTS_FILE_LIST:
-        agents_file = anyio.Path(agents_file)
+    for agents_file in map(anyio.Path, AGENTS_FILE_LIST):
         if await agents_file.is_file():
-            content = await agents_file.read_text()
-            logging.info(f"Loaded AGENTS.md: {json.dumps(content, ensure_ascii=False)}")
-            return content
+            return await agents_file.read_text()
     return ""
 
 
@@ -42,6 +39,7 @@ async def lifespan(app: FastAPI, **kwargs):
 
 
 async def before_chat(agents: list, **kwargs):
-    if agents:
+    if agents and not agents[0]:
         content = await load_agents()
-        agents[0] += f"{content}\n\n"
+        logging.info(f"Loaded AGENTS.md: {json.dumps(content, ensure_ascii=False)}")
+        agents[0] = content
