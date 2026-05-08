@@ -739,84 +739,6 @@
             height: 18px;
         }
 
-        /* ===== Advanced JSON ===== */
-        .advanced-section {
-            margin-top: 8px;
-        }
-
-        .advanced-section details {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            overflow: hidden;
-            transition: box-shadow var(--transition);
-        }
-
-        .advanced-section details:hover {
-            box-shadow: var(--shadow-sm);
-        }
-
-        .advanced-section details summary {
-            padding: 14px 20px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            user-select: none;
-            transition: color var(--transition);
-            list-style: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .advanced-section details summary::-webkit-details-marker {
-            display: none;
-        }
-
-        .advanced-section details summary::before {
-            content: '\25B6';
-            font-size: 10px;
-            transition: transform 0.2s ease;
-        }
-
-        .advanced-section details[open] summary::before {
-            transform: rotate(90deg);
-        }
-
-        .advanced-section details summary:hover {
-            color: var(--text-primary);
-        }
-
-        .advanced-section details[open] summary {
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .advanced-section textarea {
-            width: 100%;
-            min-height: 240px;
-            padding: 16px;
-            background: #f8f9fb;
-            border: none;
-            color: var(--text-primary);
-            font-family: var(--mono-font);
-            font-size: 13px;
-            line-height: 1.5;
-            resize: vertical;
-            tab-size: 2;
-        }
-
-        .advanced-section textarea:focus {
-            outline: none;
-        }
-
-        .advanced-section .json-actions {
-            display: flex;
-            gap: 8px;
-            padding: 10px 16px;
-            border-top: 1px solid var(--border-color);
-            justify-content: flex-end;
-        }
 
         /* ===== Toast ===== */
         .toast {
@@ -1101,18 +1023,6 @@
         </div>
     </div>
 
-    <!-- ===== 4. 高级 JSON 编辑器 ===== -->
-    <div class="section advanced-section">
-        <details>
-            <summary>高级: JSON 编辑器</summary>
-            <textarea id="jsonEditor" spellcheck="false"></textarea>
-            <div class="json-actions">
-                <button class="btn btn-outline btn-sm" onclick="syncJsonFromUI()">从界面同步</button>
-                <button class="btn btn-primary btn-sm" onclick="applyAndSaveJson()">应用并保存</button>
-            </div>
-        </details>
-    </div>
-
 </div>
 
 <!-- ===== Modal for editing provider ===== -->
@@ -1254,7 +1164,6 @@
             providerList = Object.keys(config.model_providers);
             renderProviderButtons();
             renderModelSelector();
-            syncJsonFromUI();
         } catch (e) {
             console.error('Failed to load settings:', e);
             showToast('加载设置失败: ' + e.message, 'error');
@@ -1624,7 +1533,6 @@
 
         renderProviderButtons();
         renderModelSelector();
-        syncJsonFromUI();
 
         // Open modal for editing (fill in API key)
         showToast('已添加 ' + preset.name + '，请在弹出窗口中填写 API Key', 'info');
@@ -1644,40 +1552,11 @@
 
         renderProviderButtons();
         renderModelSelector();
-        syncJsonFromUI();
 
         // Open modal for editing
         openNewProviderModal(key);
     }
 
-    // ============================================================
-    //  JSON Editor
-    // ============================================================
-    function syncJsonFromUI() {
-        var uiConfig = buildConfigFromUI();
-        var editor = document.getElementById('jsonEditor');
-        editor.value = JSON.stringify(uiConfig, null, 2);
-    }
-
-    function applyAndSaveJson() {
-        var editor = document.getElementById('jsonEditor');
-        try {
-            var parsed = JSON.parse(editor.value);
-            if (!parsed.model_providers || typeof parsed.model_providers !== 'object') {
-                throw new Error('缺少 model_providers 字段');
-            }
-            config.model = parsed.model || '';
-            config.model_provider = parsed.model_provider || '';
-            config.model_providers = parsed.model_providers;
-            providerList = Object.keys(config.model_providers);
-            renderProviderButtons();
-            renderModelSelector();
-            // Auto-save after applying JSON edit
-            saveSettings();
-        } catch (e) {
-            showToast('JSON 格式错误: ' + e.message, 'error');
-        }
-    }
 
     // ============================================================
     //  Initialization
