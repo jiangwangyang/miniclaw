@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 # 加载插件
 def load_plugins(plugins_dir_list: list):
-    plugins, loaded = [], set()
+    plugins, loaded = [], []
     for dir_path in map(pathlib.Path, plugins_dir_list):
         if not dir_path.is_dir():
             continue
@@ -31,7 +31,7 @@ def load_plugins(plugins_dir_list: list):
                 continue
             try:
                 plugins += [importlib.import_module(f"{subdir.name}.plugin")]
-                loaded.add(subdir.name)
+                loaded += [subdir.name]
             except Exception as e:
                 logging.error(f"加载插件 {subdir.name} 失败: {e}")
     logging.info(f"Loaded {len(loaded)} plugins: {", ".join(loaded)}")
@@ -197,7 +197,7 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
 
         # 3. 判断结束
         if not [_ for _ in assistant_block_list if _["type"] == "tool_use"]:
-            final_content = assistant_block_list[-1]["text"]
+            final_content = assistant_block_list[-1].get("text", "") or assistant_block_list[-1].get("thinking", "")
             break
 
         # 4. 工具调用
