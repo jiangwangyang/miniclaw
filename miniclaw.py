@@ -109,8 +109,12 @@ async def chat_generator(session_id: str, user_content: str, work_dir: str, mess
     await execute_plugins(action="before_chat", session_id=session_id, work_dir=work_dir, messages=messages, agents=agents, tools=tools, user_content=user_content)
 
     # 初始化客户端
-    settings = json.loads(await anyio.Path(SETTINGS_FILE).read_text(encoding="utf-8")) if await anyio.Path(SETTINGS_FILE).exists() else {}
-    api, model, base_url, api_key = settings.get("api", "anthropic"), settings.get("model", ""), settings.get("base_url", ""), settings.get("api_key", "")
+    settings_file = anyio.Path(SETTINGS_FILE)
+    settings_file_content = await settings_file.read_text(encoding="utf-8") if await settings_file.exists() else ""
+    settings = json.loads(settings_file_content) if settings_file_content else {}
+    model, model_provider = settings.get("model", ""), settings.get("model_provider", "")
+    model_provider_dict = settings.get("model_providers", {}).get(model_provider, {})
+    api, base_url, api_key = model_provider_dict.get("api", "anthropic"), model_provider_dict.get("base_url", ""), model_provider_dict.get("api_key", "")
     anthropic_client: AsyncAnthropic = AsyncAnthropic(base_url=base_url, api_key=api_key)
     openai_client: AsyncOpenAI = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
